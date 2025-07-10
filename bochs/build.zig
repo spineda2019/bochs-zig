@@ -15,65 +15,446 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    // This creates a "module", which represents a collection of source files alongside
-    // some compilation options, such as optimization mode and linked system libraries.
-    // Every executable or library we compile will be based on one or more modules.
-    const lib_mod = b.createModule(.{
-        // `root_source_file` is the Zig "entry point" of the module. If a module
-        // only contains e.g. external object files, you can make this `null`.
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = b.path("src/root.zig"),
+    // ********************************************************************* //
+    // *** Individual Modules (1:1 mapping to old Makefiles static libs) *** //
+    // ********************************************************************* //
+
+    const iodev_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    iodev_module.addIncludePath(b.path("generated/"));
+    iodev_module.addIncludePath(b.path("."));
+    iodev_module.addIncludePath(b.path("instrument/stubs/"));
+    iodev_module.addCSourceFiles(.{
+        .files = &.{
+            "iodev/devices.cc",
+            "iodev/virt_timer.cc",
+            "iodev/slowdown_timer.cc",
+            "iodev/pic.cc",
+            "iodev/pit.cc",
+            "iodev/serial.cc",
+            "iodev/parallel.cc",
+            "iodev/floppy.cc",
+            "iodev/keyboard.cc",
+            "iodev/biosdev.cc",
+            "iodev/cmos.cc",
+            "iodev/harddrv.cc",
+            "iodev/dma.cc",
+            "iodev/unmapped.cc",
+            "iodev/extfpuirq.cc",
+            "iodev/speaker.cc",
+            "iodev/ioapic.cc",
+            "iodev/pci.cc",
+            "iodev/pci2isa.cc",
+            "iodev/pci_ide.cc",
+            "iodev/acpi.cc",
+            "iodev/hpet.cc",
+            "iodev/pit82c54.cc",
+            "iodev/scancodes.cc",
+            "iodev/serial_raw.cc",
+        },
+        .flags = &.{
+            "-D_FILE_OFFSET_BITS=64",
+            "-D_LARGE_FILES",
+        },
+        .language = .cpp,
     });
 
-    // We will also create a module for our other entry point, 'main.zig'.
-    const exe_mod = b.createModule(.{
-        // `root_source_file` is the Zig "entry point" of the module. If a module
-        // only contains e.g. external object files, you can make this `null`.
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = b.path("src/main.zig"),
+    const display_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    display_module.addIncludePath(b.path("generated/"));
+    display_module.addIncludePath(b.path("iodev/"));
+    display_module.addIncludePath(b.path("."));
+    display_module.addIncludePath(b.path("instrument/stubs/"));
+    display_module.addCSourceFiles(.{
+        .files = &.{
+            "iodev/display/vga.cc",
+            "iodev/display/vgacore.cc",
+            "iodev/display/ddc.cc",
+        },
+        .flags = &.{
+            "-D_FILE_OFFSET_BITS=64",
+            "-D_LARGE_FILES",
+        },
+        .language = .cpp,
     });
 
-    // Modules can depend on one another using the `std.Build.Module.addImport` function.
-    // This is what allows Zig source code to use `@import("foo")` where 'foo' is not a
-    // file path. In this case, we set up `exe_mod` to import `lib_mod`.
-    exe_mod.addImport("bochs_lib", lib_mod);
+    const hdimage_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    hdimage_module.addIncludePath(b.path("generated/"));
+    hdimage_module.addIncludePath(b.path("iodev/"));
+    hdimage_module.addIncludePath(b.path("."));
+    hdimage_module.addIncludePath(b.path("instrument/stubs/"));
+    hdimage_module.addCSourceFiles(.{
+        .files = &.{
+            "iodev/hdimage/hdimage.cc",
+            "iodev/hdimage/cdrom.cc",
+            "iodev/hdimage/cdrom_misc.cc",
+            "iodev/hdimage/vbox.cc",
+            "iodev/hdimage/vmware3.cc",
+            "iodev/hdimage/vmware4.cc",
+            "iodev/hdimage/vpc.cc",
+            "iodev/hdimage/vvfat.cc",
+        },
+        .flags = &.{
+            "-D_FILE_OFFSET_BITS=64",
+            "-D_LARGE_FILES",
+        },
+        .language = .cpp,
+    });
 
-    // Now, we will create a static library based on the module we created above.
-    // This creates a `std.Build.Step.Compile`, which is the build step responsible
-    // for actually invoking the compiler.
-    const lib = b.addLibrary(.{
-        .linkage = .static,
+    const cpu_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    cpu_module.addIncludePath(b.path("generated/"));
+    cpu_module.addIncludePath(b.path("."));
+    cpu_module.addIncludePath(b.path("instrument/stubs/"));
+    cpu_module.addCSourceFiles(.{
+        .files = &.{
+            "cpu/init.cc",
+            "cpu/cpu.cc",
+            "cpu/event.cc",
+            "cpu/icache.cc",
+            "cpu/decoder/fetchdecode32.cc",
+            "cpu/access.cc",
+            "cpu/access2.cc",
+            "cpu/shift16.cc",
+            "cpu/logical16.cc",
+            "cpu/ctrl_xfer32.cc",
+            "cpu/ctrl_xfer16.cc",
+            "cpu/mmx.cc",
+            "cpu/3dnow.cc",
+            "cpu/fpu_emu.cc",
+            "cpu/sse.cc",
+            "cpu/sse_move.cc",
+            "cpu/sse_pfp.cc",
+            "cpu/sse_rcp.cc",
+            "cpu/sse_string.cc",
+            "cpu/xsave.cc",
+            "cpu/aes.cc",
+            "cpu/gf2.cc",
+            "cpu/sha.cc",
+            "cpu/svm.cc",
+            "cpu/vmx.cc",
+            "cpu/vmcs.cc",
+            "cpu/vmexit.cc",
+            "cpu/vmfunc.cc",
+            "cpu/soft_int.cc",
+            "cpu/apic.cc",
+            "cpu/bcd.cc",
+            "cpu/mult16.cc",
+            "cpu/tasking.cc",
+            "cpu/shift32.cc",
+            "cpu/shift8.cc",
+            "cpu/arith8.cc",
+            "cpu/stack.cc",
+            "cpu/stack16.cc",
+            "cpu/protect_ctrl.cc",
+            "cpu/mult8.cc",
+            "cpu/load.cc",
+            "cpu/data_xfer8.cc",
+            "cpu/vm8086.cc",
+            "cpu/logical8.cc",
+            "cpu/logical32.cc",
+            "cpu/arith16.cc",
+            "cpu/segment_ctrl.cc",
+            "cpu/data_xfer16.cc",
+            "cpu/data_xfer32.cc",
+            "cpu/exception.cc",
+            "cpu/cpuid.cc",
+            "cpu/generic_cpuid.cc",
+            "cpu/proc_ctrl.cc",
+            "cpu/mwait.cc",
+            "cpu/crregs.cc",
+            "cpu/cet.cc",
+            "cpu/msr.cc",
+            "cpu/smm.cc",
+            "cpu/flag_ctrl_pro.cc",
+            "cpu/stack32.cc",
+            "cpu/debugstuff.cc",
+            "cpu/flag_ctrl.cc",
+            "cpu/mult32.cc",
+            "cpu/arith32.cc",
+            "cpu/jmp_far.cc",
+            "cpu/call_far.cc",
+            "cpu/ret_far.cc",
+            "cpu/iret.cc",
+            "cpu/ctrl_xfer_pro.cc",
+            "cpu/segment_ctrl_pro.cc",
+            "cpu/io.cc",
+            "cpu/crc32.cc",
+            "cpu/bit.cc",
+            "cpu/bit16.cc",
+            "cpu/bit32.cc",
+            "cpu/bmi32.cc",
+            "cpu/string.cc",
+            "cpu/faststring.cc",
+            "cpu/paging.cc",
+            "cpu/rdrand.cc",
+            "cpu/wide_int.cc",
+            "cpu/decoder/disasm.cc",
+        },
+        .flags = &.{
+            "-D_FILE_OFFSET_BITS=64",
+            "-D_LARGE_FILES",
+        },
+        .language = .cpp,
+    });
+
+    const cpudb_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    cpudb_module.addIncludePath(b.path("generated/"));
+    cpudb_module.addIncludePath(b.path("cpu/"));
+    cpudb_module.addIncludePath(b.path("."));
+    cpudb_module.addIncludePath(b.path("instrument/stubs/"));
+    cpudb_module.addCSourceFiles(.{
+        .files = &.{
+            "cpu/cpudb/intel/pentium.cc",
+            "cpu/cpudb/intel/pentium_mmx.cc",
+            "cpu/cpudb/intel/p2_klamath.cc",
+            "cpu/cpudb/intel/p3_katmai.cc",
+            "cpu/cpudb/intel/p4_willamette.cc",
+            "cpu/cpudb/intel/p4_prescott_celeron_336.cc",
+            "cpu/cpudb/intel/atom_n270.cc",
+            "cpu/cpudb/intel/core_duo_t2400_yonah.cc",
+            "cpu/cpudb/intel/core2_penryn_t9600.cc",
+            "cpu/cpudb/intel/corei5_lynnfield_750.cc",
+            "cpu/cpudb/intel/corei5_arrandale_m520.cc",
+            "cpu/cpudb/intel/corei7_sandy_bridge_2600K.cc",
+            "cpu/cpudb/intel/corei7_ivy_bridge_3770K.cc",
+            "cpu/cpudb/intel/corei7_haswell_4770.cc",
+            "cpu/cpudb/intel/broadwell_ult.cc",
+            "cpu/cpudb/intel/corei7_skylake-x.cc",
+            "cpu/cpudb/intel/corei3_cnl.cc",
+            "cpu/cpudb/intel/corei7_icelake-u.cc",
+            "cpu/cpudb/intel/tigerlake.cc",
+            "cpu/cpudb/amd/amd_k6_2_chomper.cc",
+            "cpu/cpudb/amd/athlon64_clawhammer.cc",
+            "cpu/cpudb/amd/athlon64_venice.cc",
+            "cpu/cpudb/amd/turion64_tyler.cc",
+            "cpu/cpudb/amd/phenomx3_8650_toliman.cc",
+            "cpu/cpudb/amd/trinity_apu.cc",
+            "cpu/cpudb/amd/zambezi.cc",
+            "cpu/cpudb/amd/ryzen.cc",
+        },
+        .flags = &.{
+            "-D_FILE_OFFSET_BITS=64",
+            "-D_LARGE_FILES",
+        },
+        .language = .cpp,
+    });
+
+    const memory_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    memory_module.addIncludePath(b.path("generated/"));
+    memory_module.addIncludePath(b.path("."));
+    memory_module.addIncludePath(b.path("instrument/stubs/"));
+    memory_module.addCSourceFiles(.{
+        .files = &.{
+            "memory/memory.cc",
+            "memory/misc_mem.cc",
+        },
+        .flags = &.{
+            "-D_FILE_OFFSET_BITS=64",
+            "-D_LARGE_FILES",
+        },
+        .language = .cpp,
+    });
+
+    const gui_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    gui_module.addIncludePath(b.path("generated/"));
+    gui_module.addIncludePath(b.path("."));
+    gui_module.addIncludePath(b.path("iodev/"));
+    gui_module.addIncludePath(b.path("instrument/stubs/"));
+    gui_module.addCSourceFiles(.{
+        .files = &.{
+            "gui/keymap.cc",
+            "gui/gui.cc",
+            "gui/siminterface.cc",
+            "gui/paramtree.cc",
+            "gui/x.cc",
+            "gui/textconfig.cc",
+        },
+        .flags = &.{
+            "-D_FILE_OFFSET_BITS=64",
+            "-D_LARGE_FILES",
+        },
+        .language = .cpp,
+    });
+
+    const fpu_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    fpu_module.addIncludePath(b.path("generated/"));
+    fpu_module.addIncludePath(b.path("cpu/"));
+    fpu_module.addIncludePath(b.path("."));
+    fpu_module.addIncludePath(b.path("instrument/stubs/"));
+    fpu_module.addCSourceFiles(.{
+        .files = &.{
+            "cpu/fpu/ferr.cc",
+            "cpu/fpu/fpu.cc",
+            "cpu/fpu/fpu_arith.cc",
+            "cpu/fpu/fpu_compare.cc",
+            "cpu/fpu/fpu_const.cc",
+            "cpu/fpu/fpu_cmov.cc",
+            "cpu/fpu/fpu_load_store.cc",
+            "cpu/fpu/fpu_misc.cc",
+            "cpu/fpu/fpu_trans.cc",
+            "cpu/fpu/fprem.cc",
+            "cpu/fpu/fsincos.cc",
+            "cpu/fpu/f2xm1.cc",
+            "cpu/fpu/fyl2x.cc",
+            "cpu/fpu/fpatan.cc",
+            "cpu/fpu/softfloat.cc",
+            "cpu/fpu/softfloatx80.cc",
+            "cpu/fpu/softfloat16.cc",
+            "cpu/fpu/softfloat-muladd.cc",
+            "cpu/fpu/softfloat-specialize.cc",
+            "cpu/fpu/softfloat-round-pack.cc",
+            "cpu/fpu/poly.cc",
+        },
+        .flags = &.{
+            "-D_FILE_OFFSET_BITS=64",
+            "-D_LARGE_FILES",
+        },
+        .language = .cpp,
+    });
+
+    const bochs_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    bochs_mod.addIncludePath(b.path("generated/"));
+    bochs_mod.addIncludePath(b.path("instrument/stubs/"));
+    bochs_mod.addIncludePath(b.path("."));
+    bochs_mod.addCSourceFiles(.{
+        .files = &.{
+            "logio.cc",
+            "main.cc",
+            "config.cc",
+            "pc_system.cc",
+            "osdep.cc",
+            "plugin.cc",
+            "crc.cc",
+            "bxthread.cc",
+        },
+        .flags = &.{
+            "-D_FILE_OFFSET_BITS=64",
+            "-D_LARGE_FILES",
+        },
+        .language = .cpp,
+    });
+    bochs_mod.addCMacro("BX_SHARE_PATH", "\"/usr/local/share/bochs\"");
+
+    // ********************************************************************* //
+    // ******************* Creation of static libraries ******************** //
+    // ********************************************************************* //
+
+    const libiodev = b.addStaticLibrary(.{
+        .name = "iodev",
+        .root_module = iodev_module,
+    });
+    b.installArtifact(libiodev);
+
+    const libdisplay = b.addStaticLibrary(.{
+        .name = "display",
+        .root_module = display_module,
+    });
+    b.installArtifact(libdisplay);
+
+    const libhdimage = b.addStaticLibrary(.{
+        .name = "hdimage",
+        .root_module = hdimage_module,
+    });
+    b.installArtifact(libhdimage);
+
+    const libcpu = b.addStaticLibrary(.{
+        .name = "cpu",
+        .root_module = cpu_module,
+    });
+    b.installArtifact(libcpu);
+
+    const libcpudb = b.addStaticLibrary(.{
+        .name = "cpudb",
+        .root_module = cpudb_module,
+    });
+    b.installArtifact(libcpudb);
+
+    const libmemory = b.addStaticLibrary(.{
+        .name = "memory",
+        .root_module = memory_module,
+    });
+    b.installArtifact(libmemory);
+
+    const libgui = b.addStaticLibrary(.{
+        .name = "memory",
+        .root_module = gui_module,
+    });
+    b.installArtifact(libgui);
+
+    const libfpu = b.addStaticLibrary(.{
+        .name = "fpu",
+        .root_module = fpu_module,
+    });
+    b.installArtifact(libfpu);
+
+    // ********************************************************************* //
+    // ******************* Creation of final executable ******************** //
+    // ********************************************************************* //
+
+    const bochs = b.addExecutable(.{
         .name = "bochs",
-        .root_module = lib_mod,
+        .root_module = bochs_mod,
     });
-
-    // This declares intent for the library to be installed into the standard
-    // location when the user invokes the "install" step (the default step when
-    // running `zig build`).
-    b.installArtifact(lib);
-
-    // This creates another `std.Build.Step.Compile`, but this one builds an executable
-    // rather than a static library.
-    const exe = b.addExecutable(.{
-        .name = "bochs",
-        .root_module = exe_mod,
-    });
-
-    // This declares intent for the executable to be installed into the
-    // standard location when the user invokes the "install" step (the default
-    // step when running `zig build`).
-    b.installArtifact(exe);
+    bochs.linkLibrary(libiodev);
+    bochs.linkLibrary(libdisplay);
+    bochs.linkLibrary(libhdimage);
+    bochs.linkLibrary(libcpu);
+    bochs.linkLibrary(libcpudb);
+    bochs.linkLibrary(libmemory);
+    bochs.linkLibrary(libgui);
+    bochs.linkLibrary(libfpu);
+    bochs.linkSystemLibrary("X11");
+    bochs.linkSystemLibrary("Xpm");
+    bochs.linkSystemLibrary("Xrandr");
+    b.installArtifact(bochs);
 
     // This *creates* a Run step in the build graph, to be executed when another
     // step is evaluated that depends on it. The next line below will establish
     // such a dependency.
-    const run_cmd = b.addRunArtifact(exe);
+    const run_cmd = b.addRunArtifact(bochs);
 
     // By making the run step depend on the install step, it will be run from the
     // installation directory rather than directly from within the cache directory.
@@ -92,25 +473,4 @@ pub fn build(b: *std.Build) void {
     // This will evaluate the `run` step rather than the default, which is "install".
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
-
-    // Creates a step for unit testing. This only builds the test executable
-    // but does not run it.
-    const lib_unit_tests = b.addTest(.{
-        .root_module = lib_mod,
-    });
-
-    const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
-
-    const exe_unit_tests = b.addTest(.{
-        .root_module = exe_mod,
-    });
-
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
-
-    // Similar to creating the run step earlier, this exposes a `test` step to
-    // the `zig build --help` menu, providing a way for the user to request
-    // running the unit tests.
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_lib_unit_tests.step);
-    test_step.dependOn(&run_exe_unit_tests.step);
 }
