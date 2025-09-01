@@ -132,20 +132,26 @@ pub fn build(b: *std.Build) void {
     hdimage_module.addIncludePath(b.path("iodev/"));
     hdimage_module.addIncludePath(b.path("."));
     hdimage_module.addIncludePath(b.path("instrument/stubs/"));
-    hdimage_module.addCSourceFiles(.{
-        .files = &.{
-            "iodev/hdimage/hdimage.cc",
-            "iodev/hdimage/cdrom.cc",
-            "iodev/hdimage/cdrom_misc.cc",
-            "iodev/hdimage/vbox.cc",
-            "iodev/hdimage/vmware3.cc",
-            "iodev/hdimage/vmware4.cc",
-            "iodev/hdimage/vpc.cc",
-            "iodev/hdimage/vvfat.cc",
-        },
-        .flags = &.{},
-        .language = .cpp,
-    });
+    const hdimage_module_files: []const SourceFile = comptime &.{
+        .{ .directory = "iodev/hdimage/", .name = "hdimage.cc" },
+        .{ .directory = "iodev/hdimage/", .name = "cdrom.cc" },
+        .{ .directory = "iodev/hdimage/", .name = "cdrom_misc.cc" },
+        .{ .directory = "iodev/hdimage/", .name = "vbox.cc" },
+        .{ .directory = "iodev/hdimage/", .name = "vmware3.cc" },
+        .{ .directory = "iodev/hdimage/", .name = "vmware4.cc" },
+        .{ .directory = "iodev/hdimage/", .name = "vpc.cc" },
+        .{ .directory = "iodev/hdimage/", .name = "vvfat.cc" },
+    };
+    inline for (hdimage_module_files) |file| {
+        hdimage_module.addCSourceFile(.{
+            .file = file.toLazyPath(b) catch unreachable,
+            .flags = &.{
+                "-MJ",
+                file.toTmpFileName(b) catch unreachable,
+            },
+            .language = .cpp,
+        });
+    }
     hdimage_module.addCMacro("_FILE_OFFSET_BITS", "64");
     hdimage_module.addCMacro("_LARGE_FILES", "");
 
@@ -158,94 +164,100 @@ pub fn build(b: *std.Build) void {
     cpu_module.addIncludePath(b.path("generated/"));
     cpu_module.addIncludePath(b.path("."));
     cpu_module.addIncludePath(b.path("instrument/stubs/"));
-    cpu_module.addCSourceFiles(.{
-        .files = &.{
-            "cpu/init.cc",
-            "cpu/cpu.cc",
-            "cpu/event.cc",
-            "cpu/icache.cc",
-            "cpu/decoder/fetchdecode32.cc",
-            "cpu/access.cc",
-            "cpu/access2.cc",
-            "cpu/shift16.cc",
-            "cpu/logical16.cc",
-            "cpu/ctrl_xfer32.cc",
-            "cpu/ctrl_xfer16.cc",
-            "cpu/mmx.cc",
-            "cpu/3dnow.cc",
-            "cpu/fpu_emu.cc",
-            "cpu/sse.cc",
-            "cpu/sse_move.cc",
-            "cpu/sse_pfp.cc",
-            "cpu/sse_rcp.cc",
-            "cpu/sse_string.cc",
-            "cpu/xsave.cc",
-            "cpu/aes.cc",
-            "cpu/gf2.cc",
-            "cpu/sha.cc",
-            "cpu/svm.cc",
-            "cpu/vmx.cc",
-            "cpu/vmcs.cc",
-            "cpu/vmexit.cc",
-            "cpu/vmfunc.cc",
-            "cpu/soft_int.cc",
-            "cpu/apic.cc",
-            "cpu/bcd.cc",
-            "cpu/mult16.cc",
-            "cpu/tasking.cc",
-            "cpu/shift32.cc",
-            "cpu/shift8.cc",
-            "cpu/arith8.cc",
-            "cpu/stack.cc",
-            "cpu/stack16.cc",
-            "cpu/protect_ctrl.cc",
-            "cpu/mult8.cc",
-            "cpu/load.cc",
-            "cpu/data_xfer8.cc",
-            "cpu/vm8086.cc",
-            "cpu/logical8.cc",
-            "cpu/logical32.cc",
-            "cpu/arith16.cc",
-            "cpu/segment_ctrl.cc",
-            "cpu/data_xfer16.cc",
-            "cpu/data_xfer32.cc",
-            "cpu/exception.cc",
-            "cpu/cpuid.cc",
-            "cpu/generic_cpuid.cc",
-            "cpu/proc_ctrl.cc",
-            "cpu/mwait.cc",
-            "cpu/crregs.cc",
-            "cpu/cet.cc",
-            "cpu/msr.cc",
-            "cpu/smm.cc",
-            "cpu/flag_ctrl_pro.cc",
-            "cpu/stack32.cc",
-            "cpu/debugstuff.cc",
-            "cpu/flag_ctrl.cc",
-            "cpu/mult32.cc",
-            "cpu/arith32.cc",
-            "cpu/jmp_far.cc",
-            "cpu/call_far.cc",
-            "cpu/ret_far.cc",
-            "cpu/iret.cc",
-            "cpu/ctrl_xfer_pro.cc",
-            "cpu/segment_ctrl_pro.cc",
-            "cpu/io.cc",
-            "cpu/crc32.cc",
-            "cpu/bit.cc",
-            "cpu/bit16.cc",
-            "cpu/bit32.cc",
-            "cpu/bmi32.cc",
-            "cpu/string.cc",
-            "cpu/faststring.cc",
-            "cpu/paging.cc",
-            "cpu/rdrand.cc",
-            "cpu/wide_int.cc",
-            "cpu/decoder/disasm.cc",
-        },
-        .flags = &.{},
-        .language = .cpp,
-    });
+    const cpu_module_files: []const SourceFile = comptime &.{
+        .{ .directory = "cpu/", .name = "init.cc" },
+        .{ .directory = "cpu/", .name = "cpu.cc" },
+        .{ .directory = "cpu/", .name = "event.cc" },
+        .{ .directory = "cpu/", .name = "icache.cc" },
+        .{ .directory = "cpu/decoder/", .name = "fetchdecode32.cc" },
+        .{ .directory = "cpu/", .name = "access.cc" },
+        .{ .directory = "cpu/", .name = "access2.cc" },
+        .{ .directory = "cpu/", .name = "shift16.cc" },
+        .{ .directory = "cpu/", .name = "logical16.cc" },
+        .{ .directory = "cpu/", .name = "ctrl_xfer32.cc" },
+        .{ .directory = "cpu/", .name = "ctrl_xfer16.cc" },
+        .{ .directory = "cpu/", .name = "mmx.cc" },
+        .{ .directory = "cpu/", .name = "3dnow.cc" },
+        .{ .directory = "cpu/", .name = "fpu_emu.cc" },
+        .{ .directory = "cpu/", .name = "sse.cc" },
+        .{ .directory = "cpu/", .name = "sse_move.cc" },
+        .{ .directory = "cpu/", .name = "sse_pfp.cc" },
+        .{ .directory = "cpu/", .name = "sse_rcp.cc" },
+        .{ .directory = "cpu/", .name = "sse_string.cc" },
+        .{ .directory = "cpu/", .name = "xsave.cc" },
+        .{ .directory = "cpu/", .name = "aes.cc" },
+        .{ .directory = "cpu/", .name = "gf2.cc" },
+        .{ .directory = "cpu/", .name = "sha.cc" },
+        .{ .directory = "cpu/", .name = "svm.cc" },
+        .{ .directory = "cpu/", .name = "vmx.cc" },
+        .{ .directory = "cpu/", .name = "vmcs.cc" },
+        .{ .directory = "cpu/", .name = "vmexit.cc" },
+        .{ .directory = "cpu/", .name = "vmfunc.cc" },
+        .{ .directory = "cpu/", .name = "soft_int.cc" },
+        .{ .directory = "cpu/", .name = "apic.cc" },
+        .{ .directory = "cpu/", .name = "bcd.cc" },
+        .{ .directory = "cpu/", .name = "mult16.cc" },
+        .{ .directory = "cpu/", .name = "tasking.cc" },
+        .{ .directory = "cpu/", .name = "shift32.cc" },
+        .{ .directory = "cpu/", .name = "shift8.cc" },
+        .{ .directory = "cpu/", .name = "arith8.cc" },
+        .{ .directory = "cpu/", .name = "stack.cc" },
+        .{ .directory = "cpu/", .name = "stack16.cc" },
+        .{ .directory = "cpu/", .name = "protect_ctrl.cc" },
+        .{ .directory = "cpu/", .name = "mult8.cc" },
+        .{ .directory = "cpu/", .name = "load.cc" },
+        .{ .directory = "cpu/", .name = "data_xfer8.cc" },
+        .{ .directory = "cpu/", .name = "vm8086.cc" },
+        .{ .directory = "cpu/", .name = "logical8.cc" },
+        .{ .directory = "cpu/", .name = "logical32.cc" },
+        .{ .directory = "cpu/", .name = "arith16.cc" },
+        .{ .directory = "cpu/", .name = "segment_ctrl.cc" },
+        .{ .directory = "cpu/", .name = "data_xfer16.cc" },
+        .{ .directory = "cpu/", .name = "data_xfer32.cc" },
+        .{ .directory = "cpu/", .name = "exception.cc" },
+        .{ .directory = "cpu/", .name = "cpuid.cc" },
+        .{ .directory = "cpu/", .name = "generic_cpuid.cc" },
+        .{ .directory = "cpu/", .name = "proc_ctrl.cc" },
+        .{ .directory = "cpu/", .name = "mwait.cc" },
+        .{ .directory = "cpu/", .name = "crregs.cc" },
+        .{ .directory = "cpu/", .name = "cet.cc" },
+        .{ .directory = "cpu/", .name = "msr.cc" },
+        .{ .directory = "cpu/", .name = "smm.cc" },
+        .{ .directory = "cpu/", .name = "flag_ctrl_pro.cc" },
+        .{ .directory = "cpu/", .name = "stack32.cc" },
+        .{ .directory = "cpu/", .name = "debugstuff.cc" },
+        .{ .directory = "cpu/", .name = "flag_ctrl.cc" },
+        .{ .directory = "cpu/", .name = "mult32.cc" },
+        .{ .directory = "cpu/", .name = "arith32.cc" },
+        .{ .directory = "cpu/", .name = "jmp_far.cc" },
+        .{ .directory = "cpu/", .name = "call_far.cc" },
+        .{ .directory = "cpu/", .name = "ret_far.cc" },
+        .{ .directory = "cpu/", .name = "iret.cc" },
+        .{ .directory = "cpu/", .name = "ctrl_xfer_pro.cc" },
+        .{ .directory = "cpu/", .name = "segment_ctrl_pro.cc" },
+        .{ .directory = "cpu/", .name = "io.cc" },
+        .{ .directory = "cpu/", .name = "crc32.cc" },
+        .{ .directory = "cpu/", .name = "bit.cc" },
+        .{ .directory = "cpu/", .name = "bit16.cc" },
+        .{ .directory = "cpu/", .name = "bit32.cc" },
+        .{ .directory = "cpu/", .name = "bmi32.cc" },
+        .{ .directory = "cpu/", .name = "string.cc" },
+        .{ .directory = "cpu/", .name = "faststring.cc" },
+        .{ .directory = "cpu/", .name = "paging.cc" },
+        .{ .directory = "cpu/", .name = "rdrand.cc" },
+        .{ .directory = "cpu/", .name = "wide_int.cc" },
+        .{ .directory = "cpu/decoder/", .name = "disasm.cc" },
+    };
+    inline for (cpu_module_files) |file| {
+        cpu_module.addCSourceFile(.{
+            .file = file.toLazyPath(b) catch unreachable,
+            .flags = &.{
+                "-MJ",
+                file.toTmpFileName(b) catch unreachable,
+            },
+            .language = .cpp,
+        });
+    }
     cpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     cpu_module.addCMacro("_LARGE_FILES", "");
 
@@ -259,39 +271,45 @@ pub fn build(b: *std.Build) void {
     cpudb_module.addIncludePath(b.path("cpu/"));
     cpudb_module.addIncludePath(b.path("."));
     cpudb_module.addIncludePath(b.path("instrument/stubs/"));
-    cpudb_module.addCSourceFiles(.{
-        .files = &.{
-            "cpu/cpudb/intel/pentium.cc",
-            "cpu/cpudb/intel/pentium_mmx.cc",
-            "cpu/cpudb/intel/p2_klamath.cc",
-            "cpu/cpudb/intel/p3_katmai.cc",
-            "cpu/cpudb/intel/p4_willamette.cc",
-            "cpu/cpudb/intel/p4_prescott_celeron_336.cc",
-            "cpu/cpudb/intel/atom_n270.cc",
-            "cpu/cpudb/intel/core_duo_t2400_yonah.cc",
-            "cpu/cpudb/intel/core2_penryn_t9600.cc",
-            "cpu/cpudb/intel/corei5_lynnfield_750.cc",
-            "cpu/cpudb/intel/corei5_arrandale_m520.cc",
-            "cpu/cpudb/intel/corei7_sandy_bridge_2600K.cc",
-            "cpu/cpudb/intel/corei7_ivy_bridge_3770K.cc",
-            "cpu/cpudb/intel/corei7_haswell_4770.cc",
-            "cpu/cpudb/intel/broadwell_ult.cc",
-            "cpu/cpudb/intel/corei7_skylake-x.cc",
-            "cpu/cpudb/intel/corei3_cnl.cc",
-            "cpu/cpudb/intel/corei7_icelake-u.cc",
-            "cpu/cpudb/intel/tigerlake.cc",
-            "cpu/cpudb/amd/amd_k6_2_chomper.cc",
-            "cpu/cpudb/amd/athlon64_clawhammer.cc",
-            "cpu/cpudb/amd/athlon64_venice.cc",
-            "cpu/cpudb/amd/turion64_tyler.cc",
-            "cpu/cpudb/amd/phenomx3_8650_toliman.cc",
-            "cpu/cpudb/amd/trinity_apu.cc",
-            "cpu/cpudb/amd/zambezi.cc",
-            "cpu/cpudb/amd/ryzen.cc",
-        },
-        .flags = &.{},
-        .language = .cpp,
-    });
+    const cpudb_module_files: []const SourceFile = comptime &.{
+        .{ .directory = "cpu/cpudb/intel/", .name = "pentium.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "pentium_mmx.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "p2_klamath.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "p3_katmai.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "p4_willamette.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "p4_prescott_celeron_336.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "atom_n270.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "core_duo_t2400_yonah.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "core2_penryn_t9600.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "corei5_lynnfield_750.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "corei5_arrandale_m520.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "corei7_sandy_bridge_2600K.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "corei7_ivy_bridge_3770K.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "corei7_haswell_4770.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "broadwell_ult.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "corei7_skylake-x.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "corei3_cnl.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "corei7_icelake-u.cc" },
+        .{ .directory = "cpu/cpudb/intel/", .name = "tigerlake.cc" },
+        .{ .directory = "cpu/cpudb/amd/", .name = "amd_k6_2_chomper.cc" },
+        .{ .directory = "cpu/cpudb/amd/", .name = "athlon64_clawhammer.cc" },
+        .{ .directory = "cpu/cpudb/amd/", .name = "athlon64_venice.cc" },
+        .{ .directory = "cpu/cpudb/amd/", .name = "turion64_tyler.cc" },
+        .{ .directory = "cpu/cpudb/amd/", .name = "phenomx3_8650_toliman.cc" },
+        .{ .directory = "cpu/cpudb/amd/", .name = "trinity_apu.cc" },
+        .{ .directory = "cpu/cpudb/amd/", .name = "zambezi.cc" },
+        .{ .directory = "cpu/cpudb/amd/", .name = "ryzen.cc" },
+    };
+    inline for (cpudb_module_files) |file| {
+        cpudb_module.addCSourceFile(.{
+            .file = file.toLazyPath(b) catch unreachable,
+            .flags = &.{
+                "-MJ",
+                file.toTmpFileName(b) catch unreachable,
+            },
+            .language = .cpp,
+        });
+    }
     cpudb_module.addCMacro("_FILE_OFFSET_BITS", "64");
     cpudb_module.addCMacro("_LARGE_FILES", "");
 
@@ -304,14 +322,20 @@ pub fn build(b: *std.Build) void {
     memory_module.addIncludePath(b.path("generated/"));
     memory_module.addIncludePath(b.path("."));
     memory_module.addIncludePath(b.path("instrument/stubs/"));
-    memory_module.addCSourceFiles(.{
-        .files = &.{
-            "memory/memory.cc",
-            "memory/misc_mem.cc",
-        },
-        .flags = &.{},
-        .language = .cpp,
-    });
+    const memory_module_files: []const SourceFile = comptime &.{
+        .{ .directory = "memory/", .name = "memory.cc" },
+        .{ .directory = "memory/", .name = "misc_mem.cc" },
+    };
+    inline for (memory_module_files) |file| {
+        memory_module.addCSourceFile(.{
+            .file = file.toLazyPath(b) catch unreachable,
+            .flags = &.{
+                "-MJ",
+                file.toTmpFileName(b) catch unreachable,
+            },
+            .language = .cpp,
+        });
+    }
     memory_module.addCMacro("_FILE_OFFSET_BITS", "64");
     memory_module.addCMacro("_LARGE_FILES", "");
 
@@ -325,18 +349,24 @@ pub fn build(b: *std.Build) void {
     gui_module.addIncludePath(b.path("."));
     gui_module.addIncludePath(b.path("iodev/"));
     gui_module.addIncludePath(b.path("instrument/stubs/"));
-    gui_module.addCSourceFiles(.{
-        .files = &.{
-            "gui/keymap.cc",
-            "gui/gui.cc",
-            "gui/siminterface.cc",
-            "gui/paramtree.cc",
-            "gui/x.cc",
-            "gui/textconfig.cc",
-        },
-        .flags = &.{},
-        .language = .cpp,
-    });
+    const gui_module_files: []const SourceFile = comptime &.{
+        .{ .directory = "gui/", .name = "keymap.cc" },
+        .{ .directory = "gui/", .name = "gui.cc" },
+        .{ .directory = "gui/", .name = "siminterface.cc" },
+        .{ .directory = "gui/", .name = "paramtree.cc" },
+        .{ .directory = "gui/", .name = "x.cc" },
+        .{ .directory = "gui/", .name = "textconfig.cc" },
+    };
+    inline for (gui_module_files) |file| {
+        gui_module.addCSourceFile(.{
+            .file = file.toLazyPath(b) catch unreachable,
+            .flags = &.{
+                "-MJ",
+                file.toTmpFileName(b) catch unreachable,
+            },
+            .language = .cpp,
+        });
+    }
     gui_module.addCMacro("_FILE_OFFSET_BITS", "64");
     gui_module.addCMacro("_LARGE_FILES", "");
 
@@ -350,33 +380,39 @@ pub fn build(b: *std.Build) void {
     fpu_module.addIncludePath(b.path("cpu/"));
     fpu_module.addIncludePath(b.path("."));
     fpu_module.addIncludePath(b.path("instrument/stubs/"));
-    fpu_module.addCSourceFiles(.{
-        .files = &.{
-            "cpu/fpu/ferr.cc",
-            "cpu/fpu/fpu.cc",
-            "cpu/fpu/fpu_arith.cc",
-            "cpu/fpu/fpu_compare.cc",
-            "cpu/fpu/fpu_const.cc",
-            "cpu/fpu/fpu_cmov.cc",
-            "cpu/fpu/fpu_load_store.cc",
-            "cpu/fpu/fpu_misc.cc",
-            "cpu/fpu/fpu_trans.cc",
-            "cpu/fpu/fprem.cc",
-            "cpu/fpu/fsincos.cc",
-            "cpu/fpu/f2xm1.cc",
-            "cpu/fpu/fyl2x.cc",
-            "cpu/fpu/fpatan.cc",
-            "cpu/fpu/softfloat.cc",
-            "cpu/fpu/softfloatx80.cc",
-            "cpu/fpu/softfloat16.cc",
-            "cpu/fpu/softfloat-muladd.cc",
-            "cpu/fpu/softfloat-specialize.cc",
-            "cpu/fpu/softfloat-round-pack.cc",
-            "cpu/fpu/poly.cc",
-        },
-        .flags = &.{},
-        .language = .cpp,
-    });
+    const fpu_module_files: []const SourceFile = comptime &.{
+        .{ .directory = "cpu/fpu/", .name = "ferr.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fpu.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fpu_arith.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fpu_compare.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fpu_const.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fpu_cmov.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fpu_load_store.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fpu_misc.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fpu_trans.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fprem.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fsincos.cc" },
+        .{ .directory = "cpu/fpu/", .name = "f2xm1.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fyl2x.cc" },
+        .{ .directory = "cpu/fpu/", .name = "fpatan.cc" },
+        .{ .directory = "cpu/fpu/", .name = "softfloat.cc" },
+        .{ .directory = "cpu/fpu/", .name = "softfloatx80.cc" },
+        .{ .directory = "cpu/fpu/", .name = "softfloat16.cc" },
+        .{ .directory = "cpu/fpu/", .name = "softfloat-muladd.cc" },
+        .{ .directory = "cpu/fpu/", .name = "softfloat-specialize.cc" },
+        .{ .directory = "cpu/fpu/", .name = "softfloat-round-pack.cc" },
+        .{ .directory = "cpu/fpu/", .name = "poly.cc" },
+    };
+    inline for (fpu_module_files) |file| {
+        fpu_module.addCSourceFile(.{
+            .file = file.toLazyPath(b) catch unreachable,
+            .flags = &.{
+                "-MJ",
+                file.toTmpFileName(b) catch unreachable,
+            },
+            .language = .cpp,
+        });
+    }
     fpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     fpu_module.addCMacro("_LARGE_FILES", "");
 
@@ -389,20 +425,26 @@ pub fn build(b: *std.Build) void {
     bochs_mod.addIncludePath(b.path("generated/"));
     bochs_mod.addIncludePath(b.path("instrument/stubs/"));
     bochs_mod.addIncludePath(b.path("."));
-    bochs_mod.addCSourceFiles(.{
-        .files = &.{
-            "logio.cc",
-            "main.cc",
-            "config.cc",
-            "pc_system.cc",
-            "osdep.cc",
-            "plugin.cc",
-            "crc.cc",
-            "bxthread.cc",
-        },
-        .flags = &.{},
-        .language = .cpp,
-    });
+    const bochs_mod_files: []const SourceFile = comptime &.{
+        .{ .directory = "", .name = "logio.cc" },
+        .{ .directory = "", .name = "main.cc" },
+        .{ .directory = "", .name = "config.cc" },
+        .{ .directory = "", .name = "pc_system.cc" },
+        .{ .directory = "", .name = "osdep.cc" },
+        .{ .directory = "", .name = "plugin.cc" },
+        .{ .directory = "", .name = "crc.cc" },
+        .{ .directory = "", .name = "bxthread.cc" },
+    };
+    inline for (bochs_mod_files) |file| {
+        bochs_mod.addCSourceFile(.{
+            .file = file.toLazyPath(b) catch unreachable,
+            .flags = &.{
+                "-MJ",
+                file.toTmpFileName(b) catch unreachable,
+            },
+            .language = .cpp,
+        });
+    }
     bochs_mod.addCMacro("_FILE_OFFSET_BITS", "64");
     bochs_mod.addCMacro("_LARGE_FILES", "");
     const bx_share_path: []const u8 = blk: {
