@@ -4,6 +4,26 @@ const builtin = @import("builtin");
 const SourceFile = struct {
     name: []const u8,
     directory: []const u8,
+
+    pub fn toLazyPath(self: SourceFile, b: *std.Build) std.mem.Allocator.Error!std.Build.LazyPath {
+        var buf: std.ArrayList(u8) = .empty;
+        try buf.appendSlice(b.allocator, self.directory);
+        try buf.appendSlice(b.allocator, self.name);
+        return b.path(buf.items);
+    }
+
+    pub fn toTmpFileName(self: SourceFile, b: *std.Build) std.mem.Allocator.Error![]const u8 {
+        var buf: std.ArrayList(u8) = .empty;
+        for (self.directory) |letter| {
+            try buf.append(b.allocator, switch (letter) {
+                '/' => '.',
+                else => |other| other,
+            });
+        }
+        try buf.appendSlice(b.allocator, self.name);
+        try buf.appendSlice(b.allocator, ".json.tmp");
+        return buf.items;
+    }
 };
 
 // Although this function looks imperative, note that its job is to
@@ -63,10 +83,10 @@ pub fn build(b: *std.Build) void {
     };
     inline for (iodev_module_files) |file| {
         iodev_module.addCSourceFile(.{
-            .file = b.path(file.directory ++ file.name),
+            .file = file.toLazyPath(b) catch unreachable,
             .flags = &.{
                 "-MJ",
-                file.name ++ ".json.tmp",
+                file.toTmpFileName(b) catch unreachable,
             },
             .language = .cpp,
         });
@@ -84,15 +104,21 @@ pub fn build(b: *std.Build) void {
     display_module.addIncludePath(b.path("iodev/"));
     display_module.addIncludePath(b.path("."));
     display_module.addIncludePath(b.path("instrument/stubs/"));
-    display_module.addCSourceFiles(.{
-        .files = &.{
-            "iodev/display/vga.cc",
-            "iodev/display/vgacore.cc",
-            "iodev/display/ddc.cc",
-        },
-        .flags = &.{},
-        .language = .cpp,
-    });
+    const display_module_files: []const SourceFile = comptime &.{
+        .{ .directory = "iodev/display/", .name = "vga.cc" },
+        .{ .directory = "iodev/display/", .name = "vgacore.cc" },
+        .{ .directory = "iodev/display/", .name = "ddc.cc" },
+    };
+    inline for (display_module_files) |file| {
+        display_module.addCSourceFile(.{
+            .file = file.toLazyPath(b) catch unreachable,
+            .flags = &.{
+                "-MJ",
+                file.toTmpFileName(b) catch unreachable,
+            },
+            .language = .cpp,
+        });
+    }
     display_module.addCMacro("_FILE_OFFSET_BITS", "64");
     display_module.addCMacro("_LARGE_FILES", "");
 

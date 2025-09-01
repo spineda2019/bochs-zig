@@ -36,11 +36,15 @@ pub fn main() !void {
 
     var iterator: std.fs.Dir.Iterator = dir.iterate();
 
-    var fragments: std.array_list.Aligned([]const u8, null) = .empty;
+    var fragments: std.ArrayList([]const u8) = .empty;
 
     while (try iterator.next()) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".json.tmp")) {
-            try fragments.append(allocator, entry.name);
+            try fragments.append(allocator, copy: {
+                var buf: std.ArrayList(u8) = .empty;
+                try buf.appendSlice(allocator, entry.name);
+                break :copy buf.items;
+            });
         }
     }
 
