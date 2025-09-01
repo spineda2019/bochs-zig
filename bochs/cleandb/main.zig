@@ -70,12 +70,12 @@ pub fn main() !void {
         _ = try writer.write("[\n");
         defer _ = writer.write("]") catch unreachable;
 
+        var file_count: usize = 0;
+        var byte_count: usize = 0;
         for (fragments.items) |fragment| {
-            std.debug.print("Found: {s}\n", .{fragment});
             var fragment_file: std.fs.File = try dir.openFile(fragment, .{});
             defer dir.deleteFile(fragment) catch unreachable;
             defer fragment_file.close();
-            std.debug.print("Size: {}\n", .{try fragment_file.getEndPos()});
 
             var file_reader: std.fs.File.Reader = fragment_file.readerStreaming(
                 &read_buffer,
@@ -83,8 +83,13 @@ pub fn main() !void {
             const reader = &file_reader.interface;
             const read = try reader.streamRemaining(writer);
 
-            std.debug.print("Processed {} bytes...\n\n", .{read});
+            byte_count += read;
+            file_count += 1;
         }
+        std.debug.print(
+            "Processed a total of {} bytes and {} files\n\n",
+            .{ byte_count, file_count },
+        );
     }
 }
 
