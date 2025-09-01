@@ -56,12 +56,11 @@ pub fn build(b: *std.Build) void {
             "iodev/scancodes.cc",
             "iodev/serial_raw.cc",
         },
-        .flags = &.{
-            "-D_FILE_OFFSET_BITS=64",
-            "-D_LARGE_FILES",
-        },
+        .flags = &.{},
         .language = .cpp,
     });
+    iodev_module.addCMacro("_FILE_OFFSET_BITS", "64");
+    iodev_module.addCMacro("_LARGE_FILES", "");
 
     const display_module = b.createModule(.{
         .target = target,
@@ -79,12 +78,11 @@ pub fn build(b: *std.Build) void {
             "iodev/display/vgacore.cc",
             "iodev/display/ddc.cc",
         },
-        .flags = &.{
-            "-D_FILE_OFFSET_BITS=64",
-            "-D_LARGE_FILES",
-        },
+        .flags = &.{},
         .language = .cpp,
     });
+    display_module.addCMacro("_FILE_OFFSET_BITS", "64");
+    display_module.addCMacro("_LARGE_FILES", "");
 
     const hdimage_module = b.createModule(.{
         .target = target,
@@ -107,12 +105,11 @@ pub fn build(b: *std.Build) void {
             "iodev/hdimage/vpc.cc",
             "iodev/hdimage/vvfat.cc",
         },
-        .flags = &.{
-            "-D_FILE_OFFSET_BITS=64",
-            "-D_LARGE_FILES",
-        },
+        .flags = &.{},
         .language = .cpp,
     });
+    hdimage_module.addCMacro("_FILE_OFFSET_BITS", "64");
+    hdimage_module.addCMacro("_LARGE_FILES", "");
 
     const cpu_module = b.createModule(.{
         .target = target,
@@ -208,12 +205,11 @@ pub fn build(b: *std.Build) void {
             "cpu/wide_int.cc",
             "cpu/decoder/disasm.cc",
         },
-        .flags = &.{
-            "-D_FILE_OFFSET_BITS=64",
-            "-D_LARGE_FILES",
-        },
+        .flags = &.{},
         .language = .cpp,
     });
+    cpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
+    cpu_module.addCMacro("_LARGE_FILES", "");
 
     const cpudb_module = b.createModule(.{
         .target = target,
@@ -255,12 +251,11 @@ pub fn build(b: *std.Build) void {
             "cpu/cpudb/amd/zambezi.cc",
             "cpu/cpudb/amd/ryzen.cc",
         },
-        .flags = &.{
-            "-D_FILE_OFFSET_BITS=64",
-            "-D_LARGE_FILES",
-        },
+        .flags = &.{},
         .language = .cpp,
     });
+    cpudb_module.addCMacro("_FILE_OFFSET_BITS", "64");
+    cpudb_module.addCMacro("_LARGE_FILES", "");
 
     const memory_module = b.createModule(.{
         .target = target,
@@ -276,12 +271,11 @@ pub fn build(b: *std.Build) void {
             "memory/memory.cc",
             "memory/misc_mem.cc",
         },
-        .flags = &.{
-            "-D_FILE_OFFSET_BITS=64",
-            "-D_LARGE_FILES",
-        },
+        .flags = &.{},
         .language = .cpp,
     });
+    memory_module.addCMacro("_FILE_OFFSET_BITS", "64");
+    memory_module.addCMacro("_LARGE_FILES", "");
 
     const gui_module = b.createModule(.{
         .target = target,
@@ -302,12 +296,11 @@ pub fn build(b: *std.Build) void {
             "gui/x.cc",
             "gui/textconfig.cc",
         },
-        .flags = &.{
-            "-D_FILE_OFFSET_BITS=64",
-            "-D_LARGE_FILES",
-        },
+        .flags = &.{},
         .language = .cpp,
     });
+    gui_module.addCMacro("_FILE_OFFSET_BITS", "64");
+    gui_module.addCMacro("_LARGE_FILES", "");
 
     const fpu_module = b.createModule(.{
         .target = target,
@@ -343,12 +336,11 @@ pub fn build(b: *std.Build) void {
             "cpu/fpu/softfloat-round-pack.cc",
             "cpu/fpu/poly.cc",
         },
-        .flags = &.{
-            "-D_FILE_OFFSET_BITS=64",
-            "-D_LARGE_FILES",
-        },
+        .flags = &.{},
         .language = .cpp,
     });
+    fpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
+    fpu_module.addCMacro("_LARGE_FILES", "");
 
     const bochs_mod = b.createModule(.{
         .target = target,
@@ -370,62 +362,78 @@ pub fn build(b: *std.Build) void {
             "crc.cc",
             "bxthread.cc",
         },
-        .flags = &.{
-            "-D_FILE_OFFSET_BITS=64",
-            "-D_LARGE_FILES",
-        },
+        .flags = &.{},
         .language = .cpp,
     });
-    bochs_mod.addCMacro("BX_SHARE_PATH", "\"/usr/local/share/bochs\"");
+    bochs_mod.addCMacro("_FILE_OFFSET_BITS", "64");
+    bochs_mod.addCMacro("_LARGE_FILES", "");
+    const bx_share_path: []const u8 = blk: {
+        var buf: std.ArrayList(u8) = .empty;
+        buf.appendSlice(b.allocator, "\"") catch @panic("OOM");
+        buf.appendSlice(b.allocator, b.install_prefix) catch @panic("OOM");
+        buf.appendSlice(b.allocator, "bochs-share/") catch @panic("OOM");
+        buf.appendSlice(b.allocator, "\"") catch @panic("OOM");
+
+        break :blk buf.items;
+    };
+    bochs_mod.addCMacro("BX_SHARE_PATH", bx_share_path);
 
     // ********************************************************************* //
     // ******************* Creation of static libraries ******************** //
     // ********************************************************************* //
 
-    const libiodev = b.addStaticLibrary(.{
+    const libiodev = b.addLibrary(.{
         .name = "iodev",
+        .linkage = .static,
         .root_module = iodev_module,
     });
     b.installArtifact(libiodev);
 
-    const libdisplay = b.addStaticLibrary(.{
+    const libdisplay = b.addLibrary(.{
         .name = "display",
+        .linkage = .static,
         .root_module = display_module,
     });
     b.installArtifact(libdisplay);
 
-    const libhdimage = b.addStaticLibrary(.{
+    const libhdimage = b.addLibrary(.{
         .name = "hdimage",
+        .linkage = .static,
         .root_module = hdimage_module,
     });
     b.installArtifact(libhdimage);
 
-    const libcpu = b.addStaticLibrary(.{
+    const libcpu = b.addLibrary(.{
         .name = "cpu",
+        .linkage = .static,
         .root_module = cpu_module,
     });
     b.installArtifact(libcpu);
 
-    const libcpudb = b.addStaticLibrary(.{
+    const libcpudb = b.addLibrary(.{
         .name = "cpudb",
+        .linkage = .static,
         .root_module = cpudb_module,
     });
     b.installArtifact(libcpudb);
 
-    const libmemory = b.addStaticLibrary(.{
+    const libmemory = b.addLibrary(.{
         .name = "memory",
+        .linkage = .static,
         .root_module = memory_module,
     });
     b.installArtifact(libmemory);
 
-    const libgui = b.addStaticLibrary(.{
+    const libgui = b.addLibrary(.{
         .name = "memory",
+        .linkage = .static,
         .root_module = gui_module,
     });
     b.installArtifact(libgui);
 
-    const libfpu = b.addStaticLibrary(.{
+    const libfpu = b.addLibrary(.{
         .name = "fpu",
+        .linkage = .static,
         .root_module = fpu_module,
     });
     b.installArtifact(libfpu);
@@ -471,6 +479,6 @@ pub fn build(b: *std.Build) void {
     // This creates a build step. It will be visible in the `zig build --help` menu,
     // and can be selected like this: `zig build run`
     // This will evaluate the `run` step rather than the default, which is "install".
-    const run_step = b.step("run", "Run the app");
+    const run_step = b.step("run", "Run Bochs");
     run_step.dependOn(&run_cmd.step);
 }
