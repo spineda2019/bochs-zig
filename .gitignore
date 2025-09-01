@@ -1,2 +1,4 @@
 bochs/.zig-cache/
 bochs/zig-out/
+bochs/*.json.tmp
+bochs/compile_commands.json

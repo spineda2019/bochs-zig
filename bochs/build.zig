@@ -1,4 +1,10 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
+const SourceFile = struct {
+    name: []const u8,
+    directory: []const u8,
+};
 
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
@@ -28,37 +34,43 @@ pub fn build(b: *std.Build) void {
     iodev_module.addIncludePath(b.path("generated/"));
     iodev_module.addIncludePath(b.path("."));
     iodev_module.addIncludePath(b.path("instrument/stubs/"));
-    iodev_module.addCSourceFiles(.{
-        .files = &.{
-            "iodev/devices.cc",
-            "iodev/virt_timer.cc",
-            "iodev/slowdown_timer.cc",
-            "iodev/pic.cc",
-            "iodev/pit.cc",
-            "iodev/serial.cc",
-            "iodev/parallel.cc",
-            "iodev/floppy.cc",
-            "iodev/keyboard.cc",
-            "iodev/biosdev.cc",
-            "iodev/cmos.cc",
-            "iodev/harddrv.cc",
-            "iodev/dma.cc",
-            "iodev/unmapped.cc",
-            "iodev/extfpuirq.cc",
-            "iodev/speaker.cc",
-            "iodev/ioapic.cc",
-            "iodev/pci.cc",
-            "iodev/pci2isa.cc",
-            "iodev/pci_ide.cc",
-            "iodev/acpi.cc",
-            "iodev/hpet.cc",
-            "iodev/pit82c54.cc",
-            "iodev/scancodes.cc",
-            "iodev/serial_raw.cc",
-        },
-        .flags = &.{},
-        .language = .cpp,
-    });
+    const iodev_module_files: []const SourceFile = comptime &.{
+        .{ .directory = "iodev/", .name = "devices.cc" },
+        .{ .directory = "iodev/", .name = "virt_timer.cc" },
+        .{ .directory = "iodev/", .name = "slowdown_timer.cc" },
+        .{ .directory = "iodev/", .name = "pic.cc" },
+        .{ .directory = "iodev/", .name = "pit.cc" },
+        .{ .directory = "iodev/", .name = "serial.cc" },
+        .{ .directory = "iodev/", .name = "parallel.cc" },
+        .{ .directory = "iodev/", .name = "floppy.cc" },
+        .{ .directory = "iodev/", .name = "keyboard.cc" },
+        .{ .directory = "iodev/", .name = "biosdev.cc" },
+        .{ .directory = "iodev/", .name = "cmos.cc" },
+        .{ .directory = "iodev/", .name = "harddrv.cc" },
+        .{ .directory = "iodev/", .name = "dma.cc" },
+        .{ .directory = "iodev/", .name = "unmapped.cc" },
+        .{ .directory = "iodev/", .name = "extfpuirq.cc" },
+        .{ .directory = "iodev/", .name = "speaker.cc" },
+        .{ .directory = "iodev/", .name = "ioapic.cc" },
+        .{ .directory = "iodev/", .name = "pci.cc" },
+        .{ .directory = "iodev/", .name = "pci2isa.cc" },
+        .{ .directory = "iodev/", .name = "pci_ide.cc" },
+        .{ .directory = "iodev/", .name = "acpi.cc" },
+        .{ .directory = "iodev/", .name = "hpet.cc" },
+        .{ .directory = "iodev/", .name = "pit82c54.cc" },
+        .{ .directory = "iodev/", .name = "scancodes.cc" },
+        .{ .directory = "iodev/", .name = "serial_raw.cc" },
+    };
+    inline for (iodev_module_files) |file| {
+        iodev_module.addCSourceFile(.{
+            .file = b.path(file.directory ++ file.name),
+            .flags = &.{
+                "-MJ",
+                file.name ++ ".json.tmp",
+            },
+            .language = .cpp,
+        });
+    }
     iodev_module.addCMacro("_FILE_OFFSET_BITS", "64");
     iodev_module.addCMacro("_LARGE_FILES", "");
 
@@ -481,4 +493,27 @@ pub fn build(b: *std.Build) void {
     // This will evaluate the `run` step rather than the default, which is "install".
     const run_step = b.step("run", "Run Bochs");
     run_step.dependOn(&run_cmd.step);
+
+    // ******************** Compilation Database Cleanup ******************** //
+
+    const compile_db_step = b.step(
+        "compiledb",
+        "Build & format compile_commands.json",
+    );
+    const modcompiledb = b.createModule(.{
+        .root_source_file = b.path("cleandb/main.zig"),
+        .target = std.Build.resolveTargetQuery(b, std.Target.Query.fromTarget(&builtin.target)),
+        .optimize = optimize,
+    });
+    const execompiledb = b.addExecutable(.{
+        .name = "compiledb",
+        .root_module = modcompiledb,
+    });
+    const runcompiledb = b.addRunArtifact(execompiledb);
+    runcompiledb.addArg(
+        std.process.getCwdAlloc(b.allocator) catch unreachable,
+    );
+    runcompiledb.step.dependOn(&bochs.step);
+    compile_db_step.dependOn(&runcompiledb.step);
+    b.getInstallStep().dependOn(compile_db_step);
 }
