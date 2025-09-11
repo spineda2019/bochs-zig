@@ -416,7 +416,7 @@ pub fn build(b: *std.Build) void {
     fpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     fpu_module.addCMacro("_LARGE_FILES", "");
 
-    const bochs_mod = b.createModule(.{
+    const bochs_mod = b.addModule("bochs", .{
         .target = target,
         .optimize = optimize,
         .link_libc = true,
