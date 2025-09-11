@@ -441,6 +441,7 @@ pub fn build(b: *std.Build) void {
             .flags = &.{
                 "-MJ",
                 file.toTmpFileName(b) catch unreachable,
+                "-Wno-date-time",
             },
             .language = .cpp,
         });
@@ -451,7 +452,7 @@ pub fn build(b: *std.Build) void {
         var buf: std.ArrayList(u8) = .empty;
         buf.appendSlice(b.allocator, "\"") catch @panic("OOM");
         buf.appendSlice(b.allocator, b.install_prefix) catch @panic("OOM");
-        buf.appendSlice(b.allocator, "bochs-share/") catch @panic("OOM");
+        buf.appendSlice(b.allocator, "/bochs-share/") catch @panic("OOM");
         buf.appendSlice(b.allocator, "\"") catch @panic("OOM");
 
         break :blk buf.items;
@@ -522,6 +523,8 @@ pub fn build(b: *std.Build) void {
     // ******************* Creation of final executable ******************** //
     // ********************************************************************* //
 
+    const bochsrc_install = b.addInstallFile(b.path(".bochsrc"), "bochs-share/.bochsrc");
+
     const bochs = b.addExecutable(.{
         .name = "bochs",
         .root_module = bochs_mod,
@@ -537,6 +540,7 @@ pub fn build(b: *std.Build) void {
     bochs.linkSystemLibrary("X11");
     bochs.linkSystemLibrary("Xpm");
     bochs.linkSystemLibrary("Xrandr");
+    bochs.step.dependOn(&bochsrc_install.step);
     b.installArtifact(bochs);
 
     // This *creates* a Run step in the build graph, to be executed when another
