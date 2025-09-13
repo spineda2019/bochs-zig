@@ -42,6 +42,22 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // ********************************************************************* //
+    //                Replacements for configure script flags                //
+    // ********************************************************************* //
+    const with_sdl: bool = b.option(
+        bool,
+        "with-sdl",
+        "Link against and make SDL available",
+    ) orelse false;
+
+    const with_x11: bool = b.option(
+        bool,
+        "with-x11",
+        "Link against and make X11 available",
+    ) orelse false;
+    _ = with_x11;
+
+    // ********************************************************************* //
     // *** Individual Modules (1:1 mapping to old Makefiles static libs) *** //
     // ********************************************************************* //
 
@@ -93,6 +109,11 @@ pub fn build(b: *std.Build) void {
     }
     iodev_module.addCMacro("_FILE_OFFSET_BITS", "64");
     iodev_module.addCMacro("_LARGE_FILES", "");
+    if (with_sdl) {
+        iodev_module.addCMacro("_GNU_SOURCE", "1");
+        iodev_module.addCMacro("_REENTRANT", "");
+        iodev_module.linkSystemLibrary("sdl", .{});
+    }
 
     const display_module = b.createModule(.{
         .target = target,
@@ -121,6 +142,11 @@ pub fn build(b: *std.Build) void {
     }
     display_module.addCMacro("_FILE_OFFSET_BITS", "64");
     display_module.addCMacro("_LARGE_FILES", "");
+    if (with_sdl) {
+        display_module.addCMacro("_GNU_SOURCE", "1");
+        display_module.addCMacro("_REENTRANT", "");
+        display_module.linkSystemLibrary("sdl", .{});
+    }
 
     const hdimage_module = b.createModule(.{
         .target = target,
@@ -154,6 +180,11 @@ pub fn build(b: *std.Build) void {
     }
     hdimage_module.addCMacro("_FILE_OFFSET_BITS", "64");
     hdimage_module.addCMacro("_LARGE_FILES", "");
+    if (with_sdl) {
+        hdimage_module.addCMacro("_GNU_SOURCE", "1");
+        hdimage_module.addCMacro("_REENTRANT", "");
+        hdimage_module.linkSystemLibrary("sdl", .{});
+    }
 
     const cpu_module = b.createModule(.{
         .target = target,
@@ -260,6 +291,11 @@ pub fn build(b: *std.Build) void {
     }
     cpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     cpu_module.addCMacro("_LARGE_FILES", "");
+    if (with_sdl) {
+        cpu_module.addCMacro("_GNU_SOURCE", "1");
+        cpu_module.addCMacro("_REENTRANT", "");
+        cpu_module.linkSystemLibrary("sdl", .{});
+    }
 
     const cpudb_module = b.createModule(.{
         .target = target,
@@ -312,6 +348,11 @@ pub fn build(b: *std.Build) void {
     }
     cpudb_module.addCMacro("_FILE_OFFSET_BITS", "64");
     cpudb_module.addCMacro("_LARGE_FILES", "");
+    if (with_sdl) {
+        cpudb_module.addCMacro("_GNU_SOURCE", "1");
+        cpudb_module.addCMacro("_REENTRANT", "");
+        cpudb_module.linkSystemLibrary("sdl", .{});
+    }
 
     const memory_module = b.createModule(.{
         .target = target,
@@ -338,6 +379,11 @@ pub fn build(b: *std.Build) void {
     }
     memory_module.addCMacro("_FILE_OFFSET_BITS", "64");
     memory_module.addCMacro("_LARGE_FILES", "");
+    if (with_sdl) {
+        memory_module.addCMacro("_GNU_SOURCE", "1");
+        memory_module.addCMacro("_REENTRANT", "");
+        memory_module.linkSystemLibrary("sdl", .{});
+    }
 
     const gui_module = b.createModule(.{
         .target = target,
@@ -369,6 +415,11 @@ pub fn build(b: *std.Build) void {
     }
     gui_module.addCMacro("_FILE_OFFSET_BITS", "64");
     gui_module.addCMacro("_LARGE_FILES", "");
+    if (with_sdl) {
+        memory_module.addCMacro("_GNU_SOURCE", "1");
+        memory_module.addCMacro("_REENTRANT", "");
+        memory_module.linkSystemLibrary("sdl", .{});
+    }
 
     const fpu_module = b.createModule(.{
         .target = target,
@@ -415,6 +466,11 @@ pub fn build(b: *std.Build) void {
     }
     fpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     fpu_module.addCMacro("_LARGE_FILES", "");
+    if (with_sdl) {
+        fpu_module.addCMacro("_GNU_SOURCE", "1");
+        fpu_module.addCMacro("_REENTRANT", "");
+        fpu_module.linkSystemLibrary("sdl", .{});
+    }
 
     const bochs_mod = b.addModule("bochs", .{
         .target = target,
@@ -448,6 +504,11 @@ pub fn build(b: *std.Build) void {
     }
     bochs_mod.addCMacro("_FILE_OFFSET_BITS", "64");
     bochs_mod.addCMacro("_LARGE_FILES", "");
+    if (with_sdl) {
+        bochs_mod.addCMacro("_GNU_SOURCE", "1");
+        bochs_mod.addCMacro("_REENTRANT", "");
+        bochs_mod.linkSystemLibrary("sdl", .{});
+    }
     const bx_share_path: []const u8 = blk: {
         var buf: std.ArrayList(u8) = .empty;
         buf.appendSlice(b.allocator, "\"") catch @panic("OOM");
@@ -540,6 +601,9 @@ pub fn build(b: *std.Build) void {
     bochs.linkSystemLibrary("X11");
     bochs.linkSystemLibrary("Xpm");
     bochs.linkSystemLibrary("Xrandr");
+    if (with_sdl) {
+        bochs.linkSystemLibrary("SDL");
+    }
     bochs.step.dependOn(&bochsrc_install.step);
     b.installArtifact(bochs);
 
