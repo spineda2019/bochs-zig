@@ -598,9 +598,11 @@ pub fn build(b: *std.Build) void {
     bochs.linkLibrary(libmemory);
     bochs.linkLibrary(libgui);
     bochs.linkLibrary(libfpu);
-    bochs.linkSystemLibrary("X11");
-    bochs.linkSystemLibrary("Xpm");
-    bochs.linkSystemLibrary("Xrandr");
+    if (with_x11) {
+        bochs.linkSystemLibrary("X11");
+        bochs.linkSystemLibrary("Xpm");
+        bochs.linkSystemLibrary("Xrandr");
+    }
     if (with_sdl) {
         bochs.linkSystemLibrary("SDL");
     }
