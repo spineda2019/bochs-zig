@@ -627,6 +627,22 @@ pub fn build(b: *std.Build) void {
         .{ .name = "VGABIOS-lgpl-latest-banshee", .directory = "bochs/bios/" },
         .{ .name = "VGABIOS-lgpl-latest-cirrus", .directory = "bochs/bios/" },
         .{ .name = "VGABIOS-lgpl-latest-cirrus-debug", .directory = "bochs/bios/" },
+        .{ .name = "keymaps/sdl-pc-de.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/sdl-pc-us.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/sdl2-pc-de.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/sdl2-pc-us.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-be.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-da.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-de.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-es.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-fr.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-it.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-ru.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-se.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-sg.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-si.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-uk.map", .directory = "bochs/gui/" },
+        .{ .name = "keymaps/x11-pc-us.map", .directory = "bochs/gui/" },
     };
 
     const bochs = b.addExecutable(.{
