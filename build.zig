@@ -612,6 +612,23 @@ pub fn build(b: *std.Build) void {
 
     const bochsrc_install = b.addInstallFile(b.path("bochs/.bochsrc"), "bochs-share/.bochsrc");
 
+    const share_files: []const SourceFile = comptime &.{
+        .{ .name = "bios.bin-1.13.0", .directory = "bochs/bios/" },
+        .{ .name = "BIOS-bochs-latest", .directory = "bochs/bios/" },
+        .{ .name = "BIOS-bochs-legacy", .directory = "bochs/bios/" },
+        .{ .name = "SeaBIOS-README", .directory = "bochs/bios/" },
+        .{ .name = "SeaVGABIOS-README", .directory = "bochs/bios/" },
+        .{ .name = "vgabios-cirrus.bin-1.13.0", .directory = "bochs/bios/" },
+        .{ .name = "VGABIOS-elpin-2.40", .directory = "bochs/bios/" },
+        .{ .name = "VGABIOS-elpin-LICENSE", .directory = "bochs/bios/" },
+        .{ .name = "VGABIOS-lgpl-latest", .directory = "bochs/bios/" },
+        .{ .name = "VGABIOS-lgpl-latest-debug", .directory = "bochs/bios/" },
+        .{ .name = "VGABIOS-lgpl-README", .directory = "bochs/bios/" },
+        .{ .name = "VGABIOS-lgpl-latest-banshee", .directory = "bochs/bios/" },
+        .{ .name = "VGABIOS-lgpl-latest-cirrus", .directory = "bochs/bios/" },
+        .{ .name = "VGABIOS-lgpl-latest-cirrus-debug", .directory = "bochs/bios/" },
+    };
+
     const bochs = b.addExecutable(.{
         .name = "bochs",
         .root_module = bochs_mod,
@@ -630,6 +647,13 @@ pub fn build(b: *std.Build) void {
         bochs.linkSystemLibrary("Xrandr");
     }
     bochs.step.dependOn(&bochsrc_install.step);
+    inline for (share_files) |file| {
+        const install = b.addInstallFile(
+            file.toLazyPath(b) catch @panic("OOM"),
+            "bochs-share/" ++ file.name,
+        );
+        bochs.step.dependOn(&install.step);
+    }
     b.installArtifact(bochs);
 
     // This *creates* a Run step in the build graph, to be executed when another
