@@ -111,7 +111,10 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         iodev_module.addCMacro("_GNU_SOURCE", "1");
         iodev_module.addCMacro("_REENTRANT", "");
-        iodev_module.linkSystemLibrary("sdl", .{});
+        iodev_module.linkSystemLibrary(
+            "SDL",
+            .{ .preferred_link_mode = .dynamic },
+        );
     }
 
     const display_module = b.createModule(.{
@@ -144,7 +147,10 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         display_module.addCMacro("_GNU_SOURCE", "1");
         display_module.addCMacro("_REENTRANT", "");
-        display_module.linkSystemLibrary("sdl", .{});
+        display_module.linkSystemLibrary(
+            "SDL",
+            .{ .preferred_link_mode = .dynamic },
+        );
     }
 
     const hdimage_module = b.createModule(.{
@@ -182,7 +188,10 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         hdimage_module.addCMacro("_GNU_SOURCE", "1");
         hdimage_module.addCMacro("_REENTRANT", "");
-        hdimage_module.linkSystemLibrary("sdl", .{});
+        hdimage_module.linkSystemLibrary(
+            "SDL",
+            .{ .preferred_link_mode = .dynamic },
+        );
     }
 
     const cpu_module = b.createModule(.{
@@ -293,7 +302,10 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         cpu_module.addCMacro("_GNU_SOURCE", "1");
         cpu_module.addCMacro("_REENTRANT", "");
-        cpu_module.linkSystemLibrary("sdl", .{});
+        cpu_module.linkSystemLibrary(
+            "SDL",
+            .{ .preferred_link_mode = .dynamic },
+        );
     }
 
     const cpudb_module = b.createModule(.{
@@ -350,7 +362,10 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         cpudb_module.addCMacro("_GNU_SOURCE", "1");
         cpudb_module.addCMacro("_REENTRANT", "");
-        cpudb_module.linkSystemLibrary("sdl", .{});
+        cpudb_module.linkSystemLibrary(
+            "SDL",
+            .{ .preferred_link_mode = .dynamic },
+        );
     }
 
     const memory_module = b.createModule(.{
@@ -381,7 +396,10 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         memory_module.addCMacro("_GNU_SOURCE", "1");
         memory_module.addCMacro("_REENTRANT", "");
-        memory_module.linkSystemLibrary("sdl", .{});
+        memory_module.linkSystemLibrary(
+            "SDL",
+            .{ .preferred_link_mode = .dynamic },
+        );
     }
 
     const gui_module = b.createModule(.{
@@ -417,7 +435,10 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         memory_module.addCMacro("_GNU_SOURCE", "1");
         memory_module.addCMacro("_REENTRANT", "");
-        memory_module.linkSystemLibrary("sdl", .{});
+        memory_module.linkSystemLibrary(
+            "SDL",
+            .{ .preferred_link_mode = .dynamic },
+        );
     }
 
     const fpu_module = b.createModule(.{
@@ -468,7 +489,10 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         fpu_module.addCMacro("_GNU_SOURCE", "1");
         fpu_module.addCMacro("_REENTRANT", "");
-        fpu_module.linkSystemLibrary("sdl", .{});
+        fpu_module.linkSystemLibrary(
+            "SDL",
+            .{ .preferred_link_mode = .dynamic },
+        );
     }
 
     const bochs_mod = b.addModule("bochs", .{
@@ -506,7 +530,10 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         bochs_mod.addCMacro("_GNU_SOURCE", "1");
         bochs_mod.addCMacro("_REENTRANT", "");
-        bochs_mod.linkSystemLibrary("sdl", .{});
+        bochs_mod.linkSystemLibrary(
+            "SDL",
+            .{ .preferred_link_mode = .dynamic },
+        );
     }
     const bx_share_path: []const u8 = blk: {
         var buf: std.ArrayList(u8) = .empty;
@@ -601,9 +628,6 @@ pub fn build(b: *std.Build) void {
         bochs.linkSystemLibrary("X11");
         bochs.linkSystemLibrary("Xpm");
         bochs.linkSystemLibrary("Xrandr");
-    }
-    if (with_sdl) {
-        bochs.linkSystemLibrary("SDL");
     }
     bochs.step.dependOn(&bochsrc_install.step);
     b.installArtifact(bochs);
