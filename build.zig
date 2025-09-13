@@ -55,7 +55,6 @@ pub fn build(b: *std.Build) void {
         "with-x11",
         "Link against and make X11 available",
     ) orelse false;
-    _ = with_x11;
 
     // ********************************************************************* //
     // *** Individual Modules (1:1 mapping to old Makefiles static libs) *** //
