@@ -50,6 +50,26 @@ pub fn build(b: *std.Build) void {
         "Link against and make SDL available",
     ) orelse false;
 
+    const with_sdl2: bool = b.option(
+        bool,
+        "with_sdl2",
+        "Link against and make SDL2 available",
+    ) orelse false;
+
+    if (with_sdl and with_sdl2) {
+        @panic("-Dwith_sdl2 and -Dwith-sdl are mutually exclusive");
+    }
+
+    const build_sdl2_source: bool = b.option(
+        bool,
+        "build_sdl2",
+        "If using SDL, set this to true to also build SDL from source",
+    ) orelse false;
+
+    if (build_sdl2_source and !with_sdl2) {
+        @panic("Must specify -Dwith_sdl2 if building sdl2 from source");
+    }
+
     const with_x11: bool = b.option(
         bool,
         "with-x11",
@@ -59,6 +79,15 @@ pub fn build(b: *std.Build) void {
     // ********************************************************************* //
     // *** Individual Modules (1:1 mapping to old Makefiles static libs) *** //
     // ********************************************************************* //
+
+    const depsdl2: ?*std.Build.Dependency = switch (build_sdl2_source) {
+        true => b.dependency("SDL2", .{
+            .render_driver_ogl = false,
+            .render_driver_ogl_es = false,
+            .render_driver_ogl_es2 = false,
+        }),
+        false => null,
+    };
 
     const iodev_module = b.createModule(.{
         .target = target,
@@ -111,10 +140,16 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         iodev_module.addCMacro("_GNU_SOURCE", "1");
         iodev_module.addCMacro("_REENTRANT", "");
-        iodev_module.linkSystemLibrary(
-            "SDL",
-            .{ .preferred_link_mode = .dynamic },
-        );
+        iodev_module.linkSystemLibrary("SDL", .{});
+    } else if (with_sdl2) {
+        iodev_module.addCMacro("_GNU_SOURCE", "1");
+        iodev_module.addCMacro("_REENTRANT", "");
+
+        if (depsdl2) |dep| {
+            iodev_module.linkLibrary(dep.artifact("SDL2"));
+        } else {
+            iodev_module.linkSystemLibrary("SDL2", .{});
+        }
     }
 
     const display_module = b.createModule(.{
@@ -147,10 +182,16 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         display_module.addCMacro("_GNU_SOURCE", "1");
         display_module.addCMacro("_REENTRANT", "");
-        display_module.linkSystemLibrary(
-            "SDL",
-            .{ .preferred_link_mode = .dynamic },
-        );
+        display_module.linkSystemLibrary("SDL", .{});
+    } else if (with_sdl2) {
+        display_module.addCMacro("_GNU_SOURCE", "1");
+        display_module.addCMacro("_REENTRANT", "");
+
+        if (depsdl2) |dep| {
+            display_module.linkLibrary(dep.artifact("SDL2"));
+        } else {
+            display_module.linkSystemLibrary("SDL2", .{});
+        }
     }
 
     const hdimage_module = b.createModule(.{
@@ -188,10 +229,16 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         hdimage_module.addCMacro("_GNU_SOURCE", "1");
         hdimage_module.addCMacro("_REENTRANT", "");
-        hdimage_module.linkSystemLibrary(
-            "SDL",
-            .{ .preferred_link_mode = .dynamic },
-        );
+        hdimage_module.linkSystemLibrary("SDL", .{});
+    } else if (with_sdl2) {
+        hdimage_module.addCMacro("_GNU_SOURCE", "1");
+        hdimage_module.addCMacro("_REENTRANT", "");
+
+        if (depsdl2) |dep| {
+            hdimage_module.linkLibrary(dep.artifact("SDL2"));
+        } else {
+            hdimage_module.linkSystemLibrary("SDL2", .{});
+        }
     }
 
     const cpu_module = b.createModule(.{
@@ -302,10 +349,16 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         cpu_module.addCMacro("_GNU_SOURCE", "1");
         cpu_module.addCMacro("_REENTRANT", "");
-        cpu_module.linkSystemLibrary(
-            "SDL",
-            .{ .preferred_link_mode = .dynamic },
-        );
+        cpu_module.linkSystemLibrary("SDL", .{});
+    } else if (with_sdl2) {
+        cpu_module.addCMacro("_GNU_SOURCE", "1");
+        cpu_module.addCMacro("_REENTRANT", "");
+
+        if (depsdl2) |dep| {
+            cpu_module.linkLibrary(dep.artifact("SDL2"));
+        } else {
+            cpu_module.linkSystemLibrary("SDL2", .{});
+        }
     }
 
     const cpudb_module = b.createModule(.{
@@ -362,10 +415,16 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         cpudb_module.addCMacro("_GNU_SOURCE", "1");
         cpudb_module.addCMacro("_REENTRANT", "");
-        cpudb_module.linkSystemLibrary(
-            "SDL",
-            .{ .preferred_link_mode = .dynamic },
-        );
+        cpudb_module.linkSystemLibrary("SDL", .{});
+    } else if (with_sdl2) {
+        cpudb_module.addCMacro("_GNU_SOURCE", "1");
+        cpudb_module.addCMacro("_REENTRANT", "");
+
+        if (depsdl2) |dep| {
+            cpudb_module.linkLibrary(dep.artifact("SDL2"));
+        } else {
+            cpudb_module.linkSystemLibrary("SDL2", .{});
+        }
     }
 
     const memory_module = b.createModule(.{
@@ -396,10 +455,16 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         memory_module.addCMacro("_GNU_SOURCE", "1");
         memory_module.addCMacro("_REENTRANT", "");
-        memory_module.linkSystemLibrary(
-            "SDL",
-            .{ .preferred_link_mode = .dynamic },
-        );
+        memory_module.linkSystemLibrary("SDL", .{});
+    } else if (with_sdl2) {
+        memory_module.addCMacro("_GNU_SOURCE", "1");
+        memory_module.addCMacro("_REENTRANT", "");
+
+        if (depsdl2) |dep| {
+            memory_module.linkLibrary(dep.artifact("SDL2"));
+        } else {
+            memory_module.linkSystemLibrary("SDL2", .{});
+        }
     }
 
     const gui_module = b.createModule(.{
@@ -433,12 +498,18 @@ pub fn build(b: *std.Build) void {
     gui_module.addCMacro("_FILE_OFFSET_BITS", "64");
     gui_module.addCMacro("_LARGE_FILES", "");
     if (with_sdl) {
-        memory_module.addCMacro("_GNU_SOURCE", "1");
-        memory_module.addCMacro("_REENTRANT", "");
-        memory_module.linkSystemLibrary(
-            "SDL",
-            .{ .preferred_link_mode = .dynamic },
-        );
+        gui_module.addCMacro("_GNU_SOURCE", "1");
+        gui_module.addCMacro("_REENTRANT", "");
+        gui_module.linkSystemLibrary("SDL", .{});
+    } else if (with_sdl2) {
+        gui_module.addCMacro("_GNU_SOURCE", "1");
+        gui_module.addCMacro("_REENTRANT", "");
+
+        if (depsdl2) |dep| {
+            gui_module.linkLibrary(dep.artifact("SDL2"));
+        } else {
+            gui_module.linkSystemLibrary("SDL2", .{});
+        }
     }
 
     const fpu_module = b.createModule(.{
@@ -489,10 +560,16 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         fpu_module.addCMacro("_GNU_SOURCE", "1");
         fpu_module.addCMacro("_REENTRANT", "");
-        fpu_module.linkSystemLibrary(
-            "SDL",
-            .{ .preferred_link_mode = .dynamic },
-        );
+        fpu_module.linkSystemLibrary("SDL", .{});
+    } else if (with_sdl2) {
+        fpu_module.addCMacro("_GNU_SOURCE", "1");
+        fpu_module.addCMacro("_REENTRANT", "");
+
+        if (depsdl2) |dep| {
+            fpu_module.linkLibrary(dep.artifact("SDL2"));
+        } else {
+            fpu_module.linkSystemLibrary("SDL2", .{});
+        }
     }
 
     const bochs_mod = b.addModule("bochs", .{
@@ -530,10 +607,16 @@ pub fn build(b: *std.Build) void {
     if (with_sdl) {
         bochs_mod.addCMacro("_GNU_SOURCE", "1");
         bochs_mod.addCMacro("_REENTRANT", "");
-        bochs_mod.linkSystemLibrary(
-            "SDL",
-            .{ .preferred_link_mode = .dynamic },
-        );
+        bochs_mod.linkSystemLibrary("SDL", .{});
+    } else if (with_sdl2) {
+        bochs_mod.addCMacro("_GNU_SOURCE", "1");
+        bochs_mod.addCMacro("_REENTRANT", "");
+
+        if (depsdl2) |dep| {
+            bochs_mod.linkLibrary(dep.artifact("SDL2"));
+        } else {
+            bochs_mod.linkSystemLibrary("SDL2", .{});
+        }
     }
     const bx_share_path: []const u8 = blk: {
         var buf: std.ArrayList(u8) = .empty;
