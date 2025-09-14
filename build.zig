@@ -76,6 +76,15 @@ pub fn build(b: *std.Build) void {
         "Link against and make X11 available",
     ) orelse false;
 
+    // if other projects want to build this project on the fly, this ought
+    // to be left to false as to not clobber their own compiledb. This is
+    // mainly for local development.
+    const create_compiledb: bool = b.option(
+        bool,
+        "compiledb",
+        "Generate compile_commands.json for this project",
+    ) orelse false;
+
     // ********************************************************************* //
     // *** Individual Modules (1:1 mapping to old Makefiles static libs) *** //
     // ********************************************************************* //
@@ -799,5 +808,7 @@ pub fn build(b: *std.Build) void {
     );
     runcompiledb.step.dependOn(&bochs.step);
     compile_db_step.dependOn(&runcompiledb.step);
-    b.getInstallStep().dependOn(compile_db_step);
+    if (create_compiledb) {
+        b.getInstallStep().dependOn(compile_db_step);
+    }
 }
