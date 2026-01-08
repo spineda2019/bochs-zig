@@ -151,12 +151,13 @@ pub fn build(b: *std.Build) void {
         iodev_module.addCMacro("_REENTRANT", "");
         iodev_module.linkSystemLibrary("SDL", .{});
     } else if (with_sdl2) {
-        iodev_module.addCMacro("_GNU_SOURCE", "1");
-        iodev_module.addCMacro("_REENTRANT", "");
-
         if (depsdl2) |dep| {
+            iodev_module.addSystemIncludePath(dep.path("include/"));
+            iodev_module.addSystemIncludePath(dep.path("include-pregen/"));
             iodev_module.linkLibrary(dep.artifact("SDL2"));
         } else {
+            iodev_module.addCMacro("_GNU_SOURCE", "1");
+            iodev_module.addCMacro("_REENTRANT", "");
             iodev_module.linkSystemLibrary("SDL2", .{});
         }
     }
@@ -193,12 +194,13 @@ pub fn build(b: *std.Build) void {
         display_module.addCMacro("_REENTRANT", "");
         display_module.linkSystemLibrary("SDL", .{});
     } else if (with_sdl2) {
-        display_module.addCMacro("_GNU_SOURCE", "1");
-        display_module.addCMacro("_REENTRANT", "");
-
         if (depsdl2) |dep| {
+            display_module.addSystemIncludePath(dep.path("include/"));
+            display_module.addSystemIncludePath(dep.path("include-pregen/"));
             display_module.linkLibrary(dep.artifact("SDL2"));
         } else {
+            display_module.addCMacro("_GNU_SOURCE", "1");
+            display_module.addCMacro("_REENTRANT", "");
             display_module.linkSystemLibrary("SDL2", .{});
         }
     }
@@ -240,12 +242,13 @@ pub fn build(b: *std.Build) void {
         hdimage_module.addCMacro("_REENTRANT", "");
         hdimage_module.linkSystemLibrary("SDL", .{});
     } else if (with_sdl2) {
-        hdimage_module.addCMacro("_GNU_SOURCE", "1");
-        hdimage_module.addCMacro("_REENTRANT", "");
-
         if (depsdl2) |dep| {
+            hdimage_module.addSystemIncludePath(dep.path("include/"));
+            hdimage_module.addSystemIncludePath(dep.path("include-pregen/"));
             hdimage_module.linkLibrary(dep.artifact("SDL2"));
         } else {
+            hdimage_module.addCMacro("_GNU_SOURCE", "1");
+            hdimage_module.addCMacro("_REENTRANT", "");
             hdimage_module.linkSystemLibrary("SDL2", .{});
         }
     }
@@ -360,12 +363,13 @@ pub fn build(b: *std.Build) void {
         cpu_module.addCMacro("_REENTRANT", "");
         cpu_module.linkSystemLibrary("SDL", .{});
     } else if (with_sdl2) {
-        cpu_module.addCMacro("_GNU_SOURCE", "1");
-        cpu_module.addCMacro("_REENTRANT", "");
-
         if (depsdl2) |dep| {
+            cpu_module.addSystemIncludePath(dep.path("include/"));
+            cpu_module.addSystemIncludePath(dep.path("include-pregen/"));
             cpu_module.linkLibrary(dep.artifact("SDL2"));
         } else {
+            cpu_module.addCMacro("_GNU_SOURCE", "1");
+            cpu_module.addCMacro("_REENTRANT", "");
             cpu_module.linkSystemLibrary("SDL2", .{});
         }
     }
@@ -426,12 +430,13 @@ pub fn build(b: *std.Build) void {
         cpudb_module.addCMacro("_REENTRANT", "");
         cpudb_module.linkSystemLibrary("SDL", .{});
     } else if (with_sdl2) {
-        cpudb_module.addCMacro("_GNU_SOURCE", "1");
-        cpudb_module.addCMacro("_REENTRANT", "");
-
         if (depsdl2) |dep| {
+            cpudb_module.addSystemIncludePath(dep.path("include/"));
+            cpudb_module.addSystemIncludePath(dep.path("include-pregen/"));
             cpudb_module.linkLibrary(dep.artifact("SDL2"));
         } else {
+            cpudb_module.addCMacro("_GNU_SOURCE", "1");
+            cpudb_module.addCMacro("_REENTRANT", "");
             cpudb_module.linkSystemLibrary("SDL2", .{});
         }
     }
@@ -466,12 +471,13 @@ pub fn build(b: *std.Build) void {
         memory_module.addCMacro("_REENTRANT", "");
         memory_module.linkSystemLibrary("SDL", .{});
     } else if (with_sdl2) {
-        memory_module.addCMacro("_GNU_SOURCE", "1");
-        memory_module.addCMacro("_REENTRANT", "");
-
         if (depsdl2) |dep| {
+            memory_module.addSystemIncludePath(dep.path("include/"));
+            memory_module.addSystemIncludePath(dep.path("include-pregen/"));
             memory_module.linkLibrary(dep.artifact("SDL2"));
         } else {
+            memory_module.addCMacro("_GNU_SOURCE", "1");
+            memory_module.addCMacro("_REENTRANT", "");
             memory_module.linkSystemLibrary("SDL2", .{});
         }
     }
@@ -511,12 +517,13 @@ pub fn build(b: *std.Build) void {
         gui_module.addCMacro("_REENTRANT", "");
         gui_module.linkSystemLibrary("SDL", .{});
     } else if (with_sdl2) {
-        gui_module.addCMacro("_GNU_SOURCE", "1");
-        gui_module.addCMacro("_REENTRANT", "");
-
         if (depsdl2) |dep| {
+            gui_module.addSystemIncludePath(dep.path("include/"));
+            gui_module.addSystemIncludePath(dep.path("include-pregen/"));
             gui_module.linkLibrary(dep.artifact("SDL2"));
         } else {
+            gui_module.addCMacro("_GNU_SOURCE", "1");
+            gui_module.addCMacro("_REENTRANT", "");
             gui_module.linkSystemLibrary("SDL2", .{});
         }
     }
@@ -571,12 +578,13 @@ pub fn build(b: *std.Build) void {
         fpu_module.addCMacro("_REENTRANT", "");
         fpu_module.linkSystemLibrary("SDL", .{});
     } else if (with_sdl2) {
-        fpu_module.addCMacro("_GNU_SOURCE", "1");
-        fpu_module.addCMacro("_REENTRANT", "");
-
         if (depsdl2) |dep| {
+            fpu_module.addSystemIncludePath(dep.path("include/"));
+            fpu_module.addSystemIncludePath(dep.path("include-pregen/"));
             fpu_module.linkLibrary(dep.artifact("SDL2"));
         } else {
+            fpu_module.addCMacro("_GNU_SOURCE", "1");
+            fpu_module.addCMacro("_REENTRANT", "");
             fpu_module.linkSystemLibrary("SDL2", .{});
         }
     }
@@ -618,12 +626,13 @@ pub fn build(b: *std.Build) void {
         bochs_mod.addCMacro("_REENTRANT", "");
         bochs_mod.linkSystemLibrary("SDL", .{});
     } else if (with_sdl2) {
-        bochs_mod.addCMacro("_GNU_SOURCE", "1");
-        bochs_mod.addCMacro("_REENTRANT", "");
-
         if (depsdl2) |dep| {
+            bochs_mod.addSystemIncludePath(dep.path("include/"));
+            bochs_mod.addSystemIncludePath(dep.path("include-pregen/"));
             bochs_mod.linkLibrary(dep.artifact("SDL2"));
         } else {
+            bochs_mod.addCMacro("_GNU_SOURCE", "1");
+            bochs_mod.addCMacro("_REENTRANT", "");
             bochs_mod.linkSystemLibrary("SDL2", .{});
         }
     }
