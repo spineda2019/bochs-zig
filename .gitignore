@@ -5,6 +5,7 @@ bochs/compile_commands.json
 
 .zig-cache/
 zig-out/
+zig-pkg/
 *.json.tmp
 compile_commands.json
 
