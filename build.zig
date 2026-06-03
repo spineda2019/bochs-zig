@@ -750,18 +750,18 @@ pub fn build(b: *std.Build) void {
         .name = "bochs",
         .root_module = bochs_mod,
     });
-    bochs.linkLibrary(libiodev);
-    bochs.linkLibrary(libdisplay);
-    bochs.linkLibrary(libhdimage);
-    bochs.linkLibrary(libcpu);
-    bochs.linkLibrary(libcpudb);
-    bochs.linkLibrary(libmemory);
-    bochs.linkLibrary(libgui);
-    bochs.linkLibrary(libfpu);
+    bochs_mod.linkLibrary(libiodev);
+    bochs_mod.linkLibrary(libdisplay);
+    bochs_mod.linkLibrary(libhdimage);
+    bochs_mod.linkLibrary(libcpu);
+    bochs_mod.linkLibrary(libcpudb);
+    bochs_mod.linkLibrary(libmemory);
+    bochs_mod.linkLibrary(libgui);
+    bochs_mod.linkLibrary(libfpu);
     if (with_x11) {
-        bochs.linkSystemLibrary("X11");
-        bochs.linkSystemLibrary("Xpm");
-        bochs.linkSystemLibrary("Xrandr");
+        bochs_mod.linkSystemLibrary("X11", .{});
+        bochs_mod.linkSystemLibrary("Xpm", .{});
+        bochs_mod.linkSystemLibrary("Xrandr", .{});
     }
     bochs.step.dependOn(&bochsrc_install.step);
     inline for (share_files) |file| {
@@ -812,9 +812,7 @@ pub fn build(b: *std.Build) void {
         .root_module = modcompiledb,
     });
     const runcompiledb = b.addRunArtifact(execompiledb);
-    runcompiledb.addArg(
-        std.process.getCwdAlloc(b.allocator) catch unreachable,
-    );
+    runcompiledb.addFileArg(b.path(""));
     runcompiledb.step.dependOn(&bochs.step);
     compile_db_step.dependOn(&runcompiledb.step);
     if (create_compiledb) {
