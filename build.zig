@@ -26,6 +26,39 @@ const SourceFile = struct {
     }
 };
 
+const BuildOptions = struct {
+    with_sdl: bool,
+    with_sdl2: bool,
+    with_x11: bool,
+
+    compiledb: bool,
+
+    pub fn init(b: *std.Build) BuildOptions {
+        return .{
+            .with_sdl = b.option(
+                bool,
+                "with-sdl",
+                "Link against and make SDL available",
+            ) orelse false,
+            .with_sdl2 = b.option(
+                bool,
+                "with-sdl2",
+                "Link against and make SDL2 available",
+            ) orelse false,
+            .with_x11 = b.option(
+                bool,
+                "with-x11",
+                "Link against and make X11 available",
+            ) orelse false,
+            .compiledb = b.option(
+                bool,
+                "compiledb",
+                "Create compile_commands.json",
+            ) orelse false,
+        };
+    }
+};
+
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
@@ -44,53 +77,28 @@ pub fn build(b: *std.Build) void {
     // ********************************************************************* //
     //                Replacements for configure script flags                //
     // ********************************************************************* //
-    const with_sdl: bool = b.option(
-        bool,
-        "with-sdl",
-        "Link against and make SDL available",
-    ) orelse false;
+    const options: BuildOptions = .init(b);
 
-    const with_sdl2: bool = b.option(
-        bool,
-        "with_sdl2",
-        "Link against and make SDL2 available",
-    ) orelse false;
-
-    if (with_sdl and with_sdl2) {
+    if (options.with_sdl and options.with_sdl2) {
         @panic("-Dwith_sdl2 and -Dwith-sdl are mutually exclusive");
     }
-
-    const build_sdl2_source: bool = b.option(
-        bool,
-        "build_sdl2",
-        "If using SDL, set this to true to also build SDL from source",
-    ) orelse false;
-
-    if (build_sdl2_source and !with_sdl2) {
-        @panic("Must specify -Dwith_sdl2 if building sdl2 from source");
-    }
-
-    const with_x11: bool = b.option(
-        bool,
-        "with-x11",
-        "Link against and make X11 available",
-    ) orelse false;
-
-    // if other projects want to build this project on the fly, this ought
-    // to be left to false as to not clobber their own compiledb. This is
-    // mainly for local development.
-    const create_compiledb: bool = b.option(
-        bool,
-        "compiledb",
-        "Generate compile_commands.json for this project",
-    ) orelse false;
 
     // ********************************************************************* //
     // *** Individual Modules (1:1 mapping to old Makefiles static libs) *** //
     // ********************************************************************* //
 
-    const depsdl2: ?*std.Build.Dependency = switch (build_sdl2_source) {
-        true => b.dependency("SDL2", .{
+    const depsdl: ?*std.Build.Dependency = switch (options.with_sdl) {
+        true => b.lazyDependency("SDL", .{
+            .target = target,
+            .optimize = optimize,
+        }),
+        false => null,
+    };
+
+    const depsdl2: ?*std.Build.Dependency = switch (options.with_sdl2) {
+        true => b.lazyDependency("SDL2", .{
+            .target = target,
+            .optimize = optimize,
             .render_driver_ogl = false,
             .render_driver_ogl_es = false,
             .render_driver_ogl_es2 = false,
@@ -135,30 +143,33 @@ pub fn build(b: *std.Build) void {
         .{ .directory = "bochs/iodev/", .name = "serial_raw.cc" },
     };
     inline for (iodev_module_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
         iodev_module.addCSourceFile(.{
-            .file = file.toLazyPath(b) catch unreachable,
-            .flags = &.{
-                "-MJ",
-                file.toTmpFileName(b) catch unreachable,
-            },
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
             .language = .cpp,
         });
     }
     iodev_module.addCMacro("_FILE_OFFSET_BITS", "64");
     iodev_module.addCMacro("_LARGE_FILES", "");
-    if (with_sdl) {
-        iodev_module.addCMacro("_GNU_SOURCE", "1");
-        iodev_module.addCMacro("_REENTRANT", "");
-        iodev_module.linkSystemLibrary("SDL", .{});
-    } else if (with_sdl2) {
+    if (options.with_sdl) {
+        if (depsdl) |dep| {
+            iodev_module.addCMacro("_GNU_SOURCE", "1");
+            iodev_module.addCMacro("_REENTRANT", "");
+            iodev_module.linkLibrary(dep.artifact("SDL"));
+        }
+    } else if (options.with_sdl2) {
         if (depsdl2) |dep| {
             iodev_module.addSystemIncludePath(dep.path("include/"));
             iodev_module.addSystemIncludePath(dep.path("include-pregen/"));
             iodev_module.linkLibrary(dep.artifact("SDL2"));
-        } else {
-            iodev_module.addCMacro("_GNU_SOURCE", "1");
-            iodev_module.addCMacro("_REENTRANT", "");
-            iodev_module.linkSystemLibrary("SDL2", .{});
         }
     }
 
@@ -178,30 +189,34 @@ pub fn build(b: *std.Build) void {
         .{ .directory = "bochs/iodev/display/", .name = "ddc.cc" },
     };
     inline for (display_module_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
+
         display_module.addCSourceFile(.{
-            .file = file.toLazyPath(b) catch unreachable,
-            .flags = &.{
-                "-MJ",
-                file.toTmpFileName(b) catch unreachable,
-            },
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
             .language = .cpp,
         });
     }
     display_module.addCMacro("_FILE_OFFSET_BITS", "64");
     display_module.addCMacro("_LARGE_FILES", "");
-    if (with_sdl) {
-        display_module.addCMacro("_GNU_SOURCE", "1");
-        display_module.addCMacro("_REENTRANT", "");
-        display_module.linkSystemLibrary("SDL", .{});
-    } else if (with_sdl2) {
+    if (options.with_sdl) {
+        if (depsdl) |dep| {
+            display_module.addCMacro("_GNU_SOURCE", "1");
+            display_module.addCMacro("_REENTRANT", "");
+            display_module.linkLibrary(dep.artifact("SDL"));
+        }
+    } else if (options.with_sdl2) {
         if (depsdl2) |dep| {
             display_module.addSystemIncludePath(dep.path("include/"));
             display_module.addSystemIncludePath(dep.path("include-pregen/"));
             display_module.linkLibrary(dep.artifact("SDL2"));
-        } else {
-            display_module.addCMacro("_GNU_SOURCE", "1");
-            display_module.addCMacro("_REENTRANT", "");
-            display_module.linkSystemLibrary("SDL2", .{});
         }
     }
 
@@ -226,30 +241,33 @@ pub fn build(b: *std.Build) void {
         .{ .directory = "bochs/iodev/hdimage/", .name = "vvfat.cc" },
     };
     inline for (hdimage_module_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
         hdimage_module.addCSourceFile(.{
-            .file = file.toLazyPath(b) catch unreachable,
-            .flags = &.{
-                "-MJ",
-                file.toTmpFileName(b) catch unreachable,
-            },
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
             .language = .cpp,
         });
     }
     hdimage_module.addCMacro("_FILE_OFFSET_BITS", "64");
     hdimage_module.addCMacro("_LARGE_FILES", "");
-    if (with_sdl) {
-        hdimage_module.addCMacro("_GNU_SOURCE", "1");
-        hdimage_module.addCMacro("_REENTRANT", "");
-        hdimage_module.linkSystemLibrary("SDL", .{});
-    } else if (with_sdl2) {
+    if (options.with_sdl) {
+        if (depsdl) |dep| {
+            hdimage_module.addCMacro("_GNU_SOURCE", "1");
+            hdimage_module.addCMacro("_REENTRANT", "");
+            hdimage_module.linkLibrary(dep.artifact("SDL"));
+        }
+    } else if (options.with_sdl2) {
         if (depsdl2) |dep| {
             hdimage_module.addSystemIncludePath(dep.path("include/"));
             hdimage_module.addSystemIncludePath(dep.path("include-pregen/"));
             hdimage_module.linkLibrary(dep.artifact("SDL2"));
-        } else {
-            hdimage_module.addCMacro("_GNU_SOURCE", "1");
-            hdimage_module.addCMacro("_REENTRANT", "");
-            hdimage_module.linkSystemLibrary("SDL2", .{});
         }
     }
 
@@ -347,30 +365,33 @@ pub fn build(b: *std.Build) void {
         .{ .directory = "bochs/cpu/decoder/", .name = "disasm.cc" },
     };
     inline for (cpu_module_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
         cpu_module.addCSourceFile(.{
-            .file = file.toLazyPath(b) catch unreachable,
-            .flags = &.{
-                "-MJ",
-                file.toTmpFileName(b) catch unreachable,
-            },
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
             .language = .cpp,
         });
     }
     cpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     cpu_module.addCMacro("_LARGE_FILES", "");
-    if (with_sdl) {
-        cpu_module.addCMacro("_GNU_SOURCE", "1");
-        cpu_module.addCMacro("_REENTRANT", "");
-        cpu_module.linkSystemLibrary("SDL", .{});
-    } else if (with_sdl2) {
+    if (options.with_sdl) {
+        if (depsdl) |dep| {
+            cpu_module.addCMacro("_GNU_SOURCE", "1");
+            cpu_module.addCMacro("_REENTRANT", "");
+            cpu_module.linkLibrary(dep.artifact("SDL"));
+        }
+    } else if (options.with_sdl2) {
         if (depsdl2) |dep| {
             cpu_module.addSystemIncludePath(dep.path("include/"));
             cpu_module.addSystemIncludePath(dep.path("include-pregen/"));
             cpu_module.linkLibrary(dep.artifact("SDL2"));
-        } else {
-            cpu_module.addCMacro("_GNU_SOURCE", "1");
-            cpu_module.addCMacro("_REENTRANT", "");
-            cpu_module.linkSystemLibrary("SDL2", .{});
         }
     }
 
@@ -414,30 +435,33 @@ pub fn build(b: *std.Build) void {
         .{ .directory = "bochs/cpu/cpudb/amd/", .name = "ryzen.cc" },
     };
     inline for (cpudb_module_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
         cpudb_module.addCSourceFile(.{
-            .file = file.toLazyPath(b) catch unreachable,
-            .flags = &.{
-                "-MJ",
-                file.toTmpFileName(b) catch unreachable,
-            },
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
             .language = .cpp,
         });
     }
     cpudb_module.addCMacro("_FILE_OFFSET_BITS", "64");
     cpudb_module.addCMacro("_LARGE_FILES", "");
-    if (with_sdl) {
-        cpudb_module.addCMacro("_GNU_SOURCE", "1");
-        cpudb_module.addCMacro("_REENTRANT", "");
-        cpudb_module.linkSystemLibrary("SDL", .{});
-    } else if (with_sdl2) {
+    if (options.with_sdl) {
+        if (depsdl) |dep| {
+            cpudb_module.addCMacro("_GNU_SOURCE", "1");
+            cpudb_module.addCMacro("_REENTRANT", "");
+            cpudb_module.linkLibrary(dep.artifact("SDL"));
+        }
+    } else if (options.with_sdl2) {
         if (depsdl2) |dep| {
             cpudb_module.addSystemIncludePath(dep.path("include/"));
             cpudb_module.addSystemIncludePath(dep.path("include-pregen/"));
             cpudb_module.linkLibrary(dep.artifact("SDL2"));
-        } else {
-            cpudb_module.addCMacro("_GNU_SOURCE", "1");
-            cpudb_module.addCMacro("_REENTRANT", "");
-            cpudb_module.linkSystemLibrary("SDL2", .{});
         }
     }
 
@@ -455,30 +479,33 @@ pub fn build(b: *std.Build) void {
         .{ .directory = "bochs/memory/", .name = "misc_mem.cc" },
     };
     inline for (memory_module_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
         memory_module.addCSourceFile(.{
-            .file = file.toLazyPath(b) catch unreachable,
-            .flags = &.{
-                "-MJ",
-                file.toTmpFileName(b) catch unreachable,
-            },
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
             .language = .cpp,
         });
     }
     memory_module.addCMacro("_FILE_OFFSET_BITS", "64");
     memory_module.addCMacro("_LARGE_FILES", "");
-    if (with_sdl) {
-        memory_module.addCMacro("_GNU_SOURCE", "1");
-        memory_module.addCMacro("_REENTRANT", "");
-        memory_module.linkSystemLibrary("SDL", .{});
-    } else if (with_sdl2) {
+    if (options.with_sdl) {
+        if (depsdl) |dep| {
+            memory_module.addCMacro("_GNU_SOURCE", "1");
+            memory_module.addCMacro("_REENTRANT", "");
+            memory_module.linkLibrary(dep.artifact("SDL"));
+        }
+    } else if (options.with_sdl2) {
         if (depsdl2) |dep| {
             memory_module.addSystemIncludePath(dep.path("include/"));
             memory_module.addSystemIncludePath(dep.path("include-pregen/"));
             memory_module.linkLibrary(dep.artifact("SDL2"));
-        } else {
-            memory_module.addCMacro("_GNU_SOURCE", "1");
-            memory_module.addCMacro("_REENTRANT", "");
-            memory_module.linkSystemLibrary("SDL2", .{});
         }
     }
 
@@ -501,30 +528,33 @@ pub fn build(b: *std.Build) void {
         .{ .directory = "bochs/gui/", .name = "textconfig.cc" },
     };
     inline for (gui_module_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
         gui_module.addCSourceFile(.{
-            .file = file.toLazyPath(b) catch unreachable,
-            .flags = &.{
-                "-MJ",
-                file.toTmpFileName(b) catch unreachable,
-            },
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
             .language = .cpp,
         });
     }
     gui_module.addCMacro("_FILE_OFFSET_BITS", "64");
     gui_module.addCMacro("_LARGE_FILES", "");
-    if (with_sdl) {
-        gui_module.addCMacro("_GNU_SOURCE", "1");
-        gui_module.addCMacro("_REENTRANT", "");
-        gui_module.linkSystemLibrary("SDL", .{});
-    } else if (with_sdl2) {
+    if (options.with_sdl) {
+        if (depsdl) |dep| {
+            gui_module.addCMacro("_GNU_SOURCE", "1");
+            gui_module.addCMacro("_REENTRANT", "");
+            gui_module.linkLibrary(dep.artifact("SDL"));
+        }
+    } else if (options.with_sdl2) {
         if (depsdl2) |dep| {
             gui_module.addSystemIncludePath(dep.path("include/"));
             gui_module.addSystemIncludePath(dep.path("include-pregen/"));
             gui_module.linkLibrary(dep.artifact("SDL2"));
-        } else {
-            gui_module.addCMacro("_GNU_SOURCE", "1");
-            gui_module.addCMacro("_REENTRANT", "");
-            gui_module.linkSystemLibrary("SDL2", .{});
         }
     }
 
@@ -562,30 +592,33 @@ pub fn build(b: *std.Build) void {
         .{ .directory = "bochs/cpu/fpu/", .name = "poly.cc" },
     };
     inline for (fpu_module_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
         fpu_module.addCSourceFile(.{
-            .file = file.toLazyPath(b) catch unreachable,
-            .flags = &.{
-                "-MJ",
-                file.toTmpFileName(b) catch unreachable,
-            },
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
             .language = .cpp,
         });
     }
     fpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     fpu_module.addCMacro("_LARGE_FILES", "");
-    if (with_sdl) {
-        fpu_module.addCMacro("_GNU_SOURCE", "1");
-        fpu_module.addCMacro("_REENTRANT", "");
-        fpu_module.linkSystemLibrary("SDL", .{});
-    } else if (with_sdl2) {
+    if (options.with_sdl) {
+        if (depsdl) |dep| {
+            fpu_module.addCMacro("_GNU_SOURCE", "1");
+            fpu_module.addCMacro("_REENTRANT", "");
+            fpu_module.linkLibrary(dep.artifact("SDL"));
+        }
+    } else if (options.with_sdl2) {
         if (depsdl2) |dep| {
             fpu_module.addSystemIncludePath(dep.path("include/"));
             fpu_module.addSystemIncludePath(dep.path("include-pregen/"));
             fpu_module.linkLibrary(dep.artifact("SDL2"));
-        } else {
-            fpu_module.addCMacro("_GNU_SOURCE", "1");
-            fpu_module.addCMacro("_REENTRANT", "");
-            fpu_module.linkSystemLibrary("SDL2", .{});
         }
     }
 
@@ -609,31 +642,33 @@ pub fn build(b: *std.Build) void {
         .{ .directory = "bochs/", .name = "bxthread.cc" },
     };
     inline for (bochs_mod_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
         bochs_mod.addCSourceFile(.{
-            .file = file.toLazyPath(b) catch unreachable,
-            .flags = &.{
-                "-MJ",
-                file.toTmpFileName(b) catch unreachable,
-                "-Wno-date-time",
-            },
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
             .language = .cpp,
         });
     }
     bochs_mod.addCMacro("_FILE_OFFSET_BITS", "64");
     bochs_mod.addCMacro("_LARGE_FILES", "");
-    if (with_sdl) {
-        bochs_mod.addCMacro("_GNU_SOURCE", "1");
-        bochs_mod.addCMacro("_REENTRANT", "");
-        bochs_mod.linkSystemLibrary("SDL", .{});
-    } else if (with_sdl2) {
+    if (options.with_sdl) {
+        if (depsdl) |dep| {
+            bochs_mod.addCMacro("_GNU_SOURCE", "1");
+            bochs_mod.addCMacro("_REENTRANT", "");
+            bochs_mod.linkLibrary(dep.artifact("SDL"));
+        }
+    } else if (options.with_sdl2) {
         if (depsdl2) |dep| {
             bochs_mod.addSystemIncludePath(dep.path("include/"));
             bochs_mod.addSystemIncludePath(dep.path("include-pregen/"));
             bochs_mod.linkLibrary(dep.artifact("SDL2"));
-        } else {
-            bochs_mod.addCMacro("_GNU_SOURCE", "1");
-            bochs_mod.addCMacro("_REENTRANT", "");
-            bochs_mod.linkSystemLibrary("SDL2", .{});
         }
     }
     const bx_share_path: []const u8 = blk: {
@@ -758,7 +793,8 @@ pub fn build(b: *std.Build) void {
     bochs_mod.linkLibrary(libmemory);
     bochs_mod.linkLibrary(libgui);
     bochs_mod.linkLibrary(libfpu);
-    if (with_x11) {
+    if (options.with_x11) {
+        std.debug.print("WARNING: Building against X11 disables cross-buildability", .{});
         bochs_mod.linkSystemLibrary("X11", .{});
         bochs_mod.linkSystemLibrary("Xpm", .{});
         bochs_mod.linkSystemLibrary("Xrandr", .{});
@@ -815,7 +851,7 @@ pub fn build(b: *std.Build) void {
     runcompiledb.addFileArg(b.path(""));
     runcompiledb.step.dependOn(&bochs.step);
     compile_db_step.dependOn(&runcompiledb.step);
-    if (create_compiledb) {
+    if (options.compiledb) {
         b.getInstallStep().dependOn(compile_db_step);
     }
 }
