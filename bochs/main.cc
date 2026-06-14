@@ -105,11 +105,11 @@ char *bochsrc_filename = NULL;
 size_t bx_get_timestamp(char *buffer)
 {
 #if VER_SVNFLAG == 1
-#ifdef __DATE__
-#ifdef __TIME__
-  sprintf(buffer, "Compiled on %s at %s", __DATE__, __TIME__);
+#ifdef __GITDATE__
+#ifdef __GITTIME__
+  sprintf(buffer, "Compiled on %s at %s", __GITDATE__, __GITTIME__);
 #else
-  sprintf(buffer, "Compiled on %s", __DATE__);
+  sprintf(buffer, "Compiled on %s", __GITDATE__);
 #endif
 #else
   buffer[0] = 0;

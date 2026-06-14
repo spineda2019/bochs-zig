@@ -287,6 +287,10 @@ pub fn build(b: *std.Build) void {
             hdimage_module.addSystemIncludePath(dep.path("include-pregen/"));
             hdimage_module.linkLibrary(dep.artifact("SDL2"));
         }
+    } else if (options.display.with_x11) {
+        hdimage_module.linkSystemLibrary("X11", .{});
+        hdimage_module.linkSystemLibrary("Xpm", .{});
+        hdimage_module.linkSystemLibrary("Xrandr", .{});
     }
 
     const cpu_module = b.createModule(.{
@@ -673,6 +677,11 @@ pub fn build(b: *std.Build) void {
             .flags = flagbuf.items,
             .language = .cpp,
         });
+    }
+    {
+        // TODO(SEP): Maybe do?
+        bochs_mod.addCMacro("__GITDATE__", "\"20260614\"");
+        bochs_mod.addCMacro("__GITTIME__", "\"00:00\"");
     }
     bochs_mod.addCMacro("_FILE_OFFSET_BITS", "64");
     bochs_mod.addCMacro("_LARGE_FILES", "");
