@@ -27,29 +27,34 @@ const SourceFile = struct {
 };
 
 const BuildOptions = struct {
-    with_sdl: bool,
-    with_sdl2: bool,
-    with_x11: bool,
+    const Display = struct {
+        with_sdl: bool,
+        with_sdl2: bool,
+        with_x11: bool,
+    };
 
+    display: Display,
     compiledb: bool,
 
     pub fn init(b: *std.Build) BuildOptions {
         return .{
-            .with_sdl = b.option(
-                bool,
-                "with-sdl",
-                "Link against and make SDL available",
-            ) orelse false,
-            .with_sdl2 = b.option(
-                bool,
-                "with-sdl2",
-                "Link against and make SDL2 available",
-            ) orelse false,
-            .with_x11 = b.option(
-                bool,
-                "with-x11",
-                "Link against and make X11 available",
-            ) orelse false,
+            .display = .{
+                .with_sdl = b.option(
+                    bool,
+                    "with-sdl",
+                    "Link against and make SDL available",
+                ) orelse false,
+                .with_sdl2 = b.option(
+                    bool,
+                    "with-sdl2",
+                    "Link against and make SDL2 available",
+                ) orelse false,
+                .with_x11 = b.option(
+                    bool,
+                    "with-x11",
+                    "Link against and make X11 available",
+                ) orelse false,
+            },
             .compiledb = b.option(
                 bool,
                 "compiledb",
@@ -79,7 +84,20 @@ pub fn build(b: *std.Build) void {
     // ********************************************************************* //
     const options: BuildOptions = .init(b);
 
-    if (options.with_sdl and options.with_sdl2) {
+    {
+        var at_least_one: bool = false;
+        inline for (comptime std.meta.fieldNames(BuildOptions.Display)) |dsp| {
+            const field = @field(options.display, dsp);
+            if (@TypeOf(field) == bool) {
+                at_least_one = at_least_one or field;
+            }
+        }
+        if (!at_least_one) {
+            @panic("At least one display library must be specified");
+        }
+    }
+
+    if (options.display.with_sdl and options.display.with_sdl2) {
         @panic("-Dwith_sdl2 and -Dwith-sdl are mutually exclusive");
     }
 
@@ -87,7 +105,7 @@ pub fn build(b: *std.Build) void {
     // *** Individual Modules (1:1 mapping to old Makefiles static libs) *** //
     // ********************************************************************* //
 
-    const depsdl: ?*std.Build.Dependency = switch (options.with_sdl) {
+    const depsdl: ?*std.Build.Dependency = switch (options.display.with_sdl) {
         true => b.lazyDependency("SDL", .{
             .target = target,
             .optimize = optimize,
@@ -95,7 +113,7 @@ pub fn build(b: *std.Build) void {
         false => null,
     };
 
-    const depsdl2: ?*std.Build.Dependency = switch (options.with_sdl2) {
+    const depsdl2: ?*std.Build.Dependency = switch (options.display.with_sdl2) {
         true => b.lazyDependency("SDL2", .{
             .target = target,
             .optimize = optimize,
@@ -159,13 +177,13 @@ pub fn build(b: *std.Build) void {
     }
     iodev_module.addCMacro("_FILE_OFFSET_BITS", "64");
     iodev_module.addCMacro("_LARGE_FILES", "");
-    if (options.with_sdl) {
+    if (options.display.with_sdl) {
         if (depsdl) |dep| {
             iodev_module.addCMacro("_GNU_SOURCE", "1");
             iodev_module.addCMacro("_REENTRANT", "");
             iodev_module.linkLibrary(dep.artifact("SDL"));
         }
-    } else if (options.with_sdl2) {
+    } else if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             iodev_module.addSystemIncludePath(dep.path("include/"));
             iodev_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -206,13 +224,13 @@ pub fn build(b: *std.Build) void {
     }
     display_module.addCMacro("_FILE_OFFSET_BITS", "64");
     display_module.addCMacro("_LARGE_FILES", "");
-    if (options.with_sdl) {
+    if (options.display.with_sdl) {
         if (depsdl) |dep| {
             display_module.addCMacro("_GNU_SOURCE", "1");
             display_module.addCMacro("_REENTRANT", "");
             display_module.linkLibrary(dep.artifact("SDL"));
         }
-    } else if (options.with_sdl2) {
+    } else if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             display_module.addSystemIncludePath(dep.path("include/"));
             display_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -257,13 +275,13 @@ pub fn build(b: *std.Build) void {
     }
     hdimage_module.addCMacro("_FILE_OFFSET_BITS", "64");
     hdimage_module.addCMacro("_LARGE_FILES", "");
-    if (options.with_sdl) {
+    if (options.display.with_sdl) {
         if (depsdl) |dep| {
             hdimage_module.addCMacro("_GNU_SOURCE", "1");
             hdimage_module.addCMacro("_REENTRANT", "");
             hdimage_module.linkLibrary(dep.artifact("SDL"));
         }
-    } else if (options.with_sdl2) {
+    } else if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             hdimage_module.addSystemIncludePath(dep.path("include/"));
             hdimage_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -381,13 +399,13 @@ pub fn build(b: *std.Build) void {
     }
     cpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     cpu_module.addCMacro("_LARGE_FILES", "");
-    if (options.with_sdl) {
+    if (options.display.with_sdl) {
         if (depsdl) |dep| {
             cpu_module.addCMacro("_GNU_SOURCE", "1");
             cpu_module.addCMacro("_REENTRANT", "");
             cpu_module.linkLibrary(dep.artifact("SDL"));
         }
-    } else if (options.with_sdl2) {
+    } else if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             cpu_module.addSystemIncludePath(dep.path("include/"));
             cpu_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -451,13 +469,13 @@ pub fn build(b: *std.Build) void {
     }
     cpudb_module.addCMacro("_FILE_OFFSET_BITS", "64");
     cpudb_module.addCMacro("_LARGE_FILES", "");
-    if (options.with_sdl) {
+    if (options.display.with_sdl) {
         if (depsdl) |dep| {
             cpudb_module.addCMacro("_GNU_SOURCE", "1");
             cpudb_module.addCMacro("_REENTRANT", "");
             cpudb_module.linkLibrary(dep.artifact("SDL"));
         }
-    } else if (options.with_sdl2) {
+    } else if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             cpudb_module.addSystemIncludePath(dep.path("include/"));
             cpudb_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -495,13 +513,13 @@ pub fn build(b: *std.Build) void {
     }
     memory_module.addCMacro("_FILE_OFFSET_BITS", "64");
     memory_module.addCMacro("_LARGE_FILES", "");
-    if (options.with_sdl) {
+    if (options.display.with_sdl) {
         if (depsdl) |dep| {
             memory_module.addCMacro("_GNU_SOURCE", "1");
             memory_module.addCMacro("_REENTRANT", "");
             memory_module.linkLibrary(dep.artifact("SDL"));
         }
-    } else if (options.with_sdl2) {
+    } else if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             memory_module.addSystemIncludePath(dep.path("include/"));
             memory_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -544,13 +562,13 @@ pub fn build(b: *std.Build) void {
     }
     gui_module.addCMacro("_FILE_OFFSET_BITS", "64");
     gui_module.addCMacro("_LARGE_FILES", "");
-    if (options.with_sdl) {
+    if (options.display.with_sdl) {
         if (depsdl) |dep| {
             gui_module.addCMacro("_GNU_SOURCE", "1");
             gui_module.addCMacro("_REENTRANT", "");
             gui_module.linkLibrary(dep.artifact("SDL"));
         }
-    } else if (options.with_sdl2) {
+    } else if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             gui_module.addSystemIncludePath(dep.path("include/"));
             gui_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -608,13 +626,13 @@ pub fn build(b: *std.Build) void {
     }
     fpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     fpu_module.addCMacro("_LARGE_FILES", "");
-    if (options.with_sdl) {
+    if (options.display.with_sdl) {
         if (depsdl) |dep| {
             fpu_module.addCMacro("_GNU_SOURCE", "1");
             fpu_module.addCMacro("_REENTRANT", "");
             fpu_module.linkLibrary(dep.artifact("SDL"));
         }
-    } else if (options.with_sdl2) {
+    } else if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             fpu_module.addSystemIncludePath(dep.path("include/"));
             fpu_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -658,13 +676,13 @@ pub fn build(b: *std.Build) void {
     }
     bochs_mod.addCMacro("_FILE_OFFSET_BITS", "64");
     bochs_mod.addCMacro("_LARGE_FILES", "");
-    if (options.with_sdl) {
+    if (options.display.with_sdl) {
         if (depsdl) |dep| {
             bochs_mod.addCMacro("_GNU_SOURCE", "1");
             bochs_mod.addCMacro("_REENTRANT", "");
             bochs_mod.linkLibrary(dep.artifact("SDL"));
         }
-    } else if (options.with_sdl2) {
+    } else if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             bochs_mod.addSystemIncludePath(dep.path("include/"));
             bochs_mod.addSystemIncludePath(dep.path("include-pregen/"));
@@ -793,7 +811,7 @@ pub fn build(b: *std.Build) void {
     bochs_mod.linkLibrary(libmemory);
     bochs_mod.linkLibrary(libgui);
     bochs_mod.linkLibrary(libfpu);
-    if (options.with_x11) {
+    if (options.display.with_x11) {
         std.debug.print("WARNING: Building against X11 disables cross-buildability", .{});
         bochs_mod.linkSystemLibrary("X11", .{});
         bochs_mod.linkSystemLibrary("Xpm", .{});

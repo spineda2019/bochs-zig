@@ -11,12 +11,10 @@ const ParsedArgs = struct {
 
 const usage = "Usage: compiledb <PATH>";
 
-pub fn main() !void {
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-    const allocator: std.mem.Allocator = debug_allocator.allocator();
-
-    const args: [][:0]u8 = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.arena.allocator();
+    const io = init.io;
+    const args: []const [:0]const u8 = try init.minimal.args.toSlice(allocator);
 
     const parsed_args: ParsedArgs = try parseArgs(args);
     if (parsed_args.help_requested) {
@@ -26,19 +24,20 @@ pub fn main() !void {
 
     std.debug.print("Cleaning up: {s}\n", .{parsed_args.path_to_clean});
 
-    var dir: std.fs.Dir = try std.fs.cwd().openDir(
+    var dir: std.Io.Dir = try std.Io.Dir.cwd().openDir(
+        io,
         parsed_args.path_to_clean,
         .{
             .iterate = true,
         },
     );
-    defer dir.close();
+    defer dir.close(io);
 
-    var iterator: std.fs.Dir.Iterator = dir.iterate();
+    var iterator: std.Io.Dir.Iterator = dir.iterate();
 
     var fragments: std.ArrayList([]const u8) = .empty;
 
-    while (try iterator.next()) |entry| {
+    while (try iterator.next(io)) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".json.tmp")) {
             try fragments.append(allocator, copy: {
                 var buf: std.ArrayList(u8) = .empty;
@@ -52,16 +51,18 @@ pub fn main() !void {
         std.debug.print("No Json fragments found, exiting...\n", .{});
         return;
     } else {
-        var compiledb_file: std.fs.File = try dir.createFile(
+        var compiledb_file: std.Io.File = try dir.createFile(
+            io,
             "compile_commands.json",
             .{ .truncate = true },
         );
-        defer compiledb_file.close();
+        defer compiledb_file.close(io);
 
         var write_buffer: [4096]u8 = undefined;
         var read_buffer: [4096]u8 = undefined;
 
-        var file_writer: std.fs.File.Writer = compiledb_file.writerStreaming(
+        var file_writer: std.Io.File.Writer = compiledb_file.writerStreaming(
+            io,
             &write_buffer,
         );
         const writer = &file_writer.interface;
@@ -73,11 +74,12 @@ pub fn main() !void {
         var file_count: usize = 0;
         var byte_count: usize = 0;
         for (fragments.items) |fragment| {
-            var fragment_file: std.fs.File = try dir.openFile(fragment, .{});
-            defer dir.deleteFile(fragment) catch unreachable;
-            defer fragment_file.close();
+            var fragment_file: std.Io.File = try dir.openFile(io, fragment, .{});
+            defer dir.deleteFile(io, fragment) catch unreachable;
+            defer fragment_file.close(io);
 
-            var file_reader: std.fs.File.Reader = fragment_file.readerStreaming(
+            var file_reader: std.Io.File.Reader = fragment_file.readerStreaming(
+                io,
                 &read_buffer,
             );
             const reader = &file_reader.interface;
@@ -97,7 +99,7 @@ fn printHelp() void {
     std.debug.print("{s}\n", .{usage});
 }
 
-fn parseArgs(args: [][:0]u8) CleanupError!ParsedArgs {
+fn parseArgs(args: []const [:0]const u8) CleanupError!ParsedArgs {
     if (args.len != 2) {
         std.debug.print("{s}\n", .{usage});
         return CleanupError.bad_args;
