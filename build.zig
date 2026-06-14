@@ -817,7 +817,7 @@ pub fn build(b: *std.Build) void {
     bochs_mod.linkLibrary(libgui);
     bochs_mod.linkLibrary(libfpu);
     if (options.display.with_x11) {
-        std.debug.print("WARNING: Building against X11 disables cross-buildability", .{});
+        std.debug.print("WARNING: Building against X11 disables cross-buildability\n", .{});
         bochs_mod.linkSystemLibrary("X11", .{});
         bochs_mod.linkSystemLibrary("Xpm", .{});
         bochs_mod.linkSystemLibrary("Xrandr", .{});
