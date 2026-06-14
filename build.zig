@@ -799,10 +799,6 @@ pub fn build(b: *std.Build) void {
         .{ .name = "keymaps/x11-pc-us.map", .directory = "bochs/gui/" },
     };
 
-    const bochs = b.addExecutable(.{
-        .name = "bochs",
-        .root_module = bochs_mod,
-    });
     bochs_mod.linkLibrary(libiodev);
     bochs_mod.linkLibrary(libdisplay);
     bochs_mod.linkLibrary(libhdimage);
@@ -817,6 +813,11 @@ pub fn build(b: *std.Build) void {
         bochs_mod.linkSystemLibrary("Xpm", .{});
         bochs_mod.linkSystemLibrary("Xrandr", .{});
     }
+
+    const bochs = b.addExecutable(.{
+        .name = "bochs",
+        .root_module = bochs_mod,
+    });
     bochs.step.dependOn(&bochsrc_install.step);
     inline for (share_files) |file| {
         const install = b.addInstallFile(
