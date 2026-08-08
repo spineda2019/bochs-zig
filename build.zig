@@ -70,6 +70,20 @@ const BuildOptions = struct {
     }
 };
 
+const ConfigDisplayMacro = struct {
+    macro_name: []const u8,
+    enabled: bool,
+
+    fn defineCMacro(
+        macros: []const ConfigDisplayMacro,
+        mod: *std.Build.Module,
+    ) void {
+        for (macros) |macro| {
+            mod.addCMacro(macro.macro_name, if (macro.enabled) "1" else "0");
+        }
+    }
+};
+
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
@@ -113,6 +127,21 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
         false => null,
+    };
+
+    const config_display_macros = [_]ConfigDisplayMacro{
+        .{ .macro_name = "BX_WITH_X11", .enabled = options.display.with_x11 },
+        .{ .macro_name = "BX_WITH_WIN32", .enabled = target.result.os.tag == .windows },
+        .{ .macro_name = "BX_WITH_MACOS", .enabled = false },
+        .{ .macro_name = "BX_WITH_CARBON", .enabled = false },
+        .{ .macro_name = "BX_WITH_NOGUI", .enabled = false },
+        .{ .macro_name = "BX_WITH_TERM", .enabled = false },
+        .{ .macro_name = "BX_WITH_RFB", .enabled = false },
+        .{ .macro_name = "BX_WITH_VNCSRV", .enabled = false },
+        .{ .macro_name = "BX_WITH_AMIGAOS", .enabled = false },
+        .{ .macro_name = "BX_WITH_SDL", .enabled = false },
+        .{ .macro_name = "BX_WITH_SDL2", .enabled = options.display.with_sdl2 },
+        .{ .macro_name = "BX_WITH_WX", .enabled = false },
     };
 
     const iodev_module = b.createModule(.{
@@ -178,6 +207,7 @@ pub fn build(b: *std.Build) void {
         iodev_module.addCMacro("macintosh", "");
         iodev_module.addCMacro("_THREAD_SAFE", "");
     }
+    ConfigDisplayMacro.defineCMacro(&config_display_macros, iodev_module);
     iodev_module.addCMacro("_FILE_OFFSET_BITS", "64");
     iodev_module.addCMacro("_LARGE_FILES", "");
     if (options.display.with_sdl2) {
@@ -227,6 +257,7 @@ pub fn build(b: *std.Build) void {
             .language = .cpp,
         });
     }
+    ConfigDisplayMacro.defineCMacro(&config_display_macros, display_module);
     if (target.result.os.tag == .macos) {
         display_module.addCMacro("macintosh", "");
         display_module.addCMacro("_THREAD_SAFE", "");
@@ -284,6 +315,7 @@ pub fn build(b: *std.Build) void {
             .language = .cpp,
         });
     }
+    ConfigDisplayMacro.defineCMacro(&config_display_macros, hdimage_module);
     if (target.result.os.tag == .macos) {
         hdimage_module.addCMacro("macintosh", "");
         hdimage_module.addCMacro("_THREAD_SAFE", "");
@@ -418,6 +450,7 @@ pub fn build(b: *std.Build) void {
             .language = .cpp,
         });
     }
+    ConfigDisplayMacro.defineCMacro(&config_display_macros, cpu_module);
     if (target.result.os.tag == .macos) {
         cpu_module.addCMacro("macintosh", "");
         cpu_module.addCMacro("_THREAD_SAFE", "");
@@ -494,6 +527,7 @@ pub fn build(b: *std.Build) void {
             .language = .cpp,
         });
     }
+    ConfigDisplayMacro.defineCMacro(&config_display_macros, cpudb_module);
     if (target.result.os.tag == .macos) {
         cpudb_module.addCMacro("macintosh", "");
         cpudb_module.addCMacro("_THREAD_SAFE", "");
@@ -544,6 +578,7 @@ pub fn build(b: *std.Build) void {
             .language = .cpp,
         });
     }
+    ConfigDisplayMacro.defineCMacro(&config_display_macros, memory_module);
     if (target.result.os.tag == .macos) {
         memory_module.addCMacro("macintosh", "");
         memory_module.addCMacro("_THREAD_SAFE", "");
@@ -571,8 +606,10 @@ pub fn build(b: *std.Build) void {
     const display_file: []const u8 = blk: {
         if (options.display.with_sdl2) {
             break :blk "sdl2.cc";
-        } else {
+        } else if (options.display.with_x11) {
             break :blk "x.cc";
+        } else {
+            @panic("");
         }
     };
     const gui_module_files = [_]SourceFile{
@@ -606,6 +643,7 @@ pub fn build(b: *std.Build) void {
             .language = .cpp,
         });
     }
+    ConfigDisplayMacro.defineCMacro(&config_display_macros, gui_module);
     if (target.result.os.tag == .macos) {
         gui_module.addCMacro("macintosh", "");
         gui_module.addCMacro("_THREAD_SAFE", "");
@@ -676,6 +714,7 @@ pub fn build(b: *std.Build) void {
             .language = .cpp,
         });
     }
+    ConfigDisplayMacro.defineCMacro(&config_display_macros, fpu_module);
     if (target.result.os.tag == .macos) {
         fpu_module.addCMacro("macintosh", "");
         fpu_module.addCMacro("_THREAD_SAFE", "");
@@ -732,6 +771,7 @@ pub fn build(b: *std.Build) void {
             .language = .cpp,
         });
     }
+    ConfigDisplayMacro.defineCMacro(&config_display_macros, bochs_mod);
     {
         // TODO(SEP): Maybe do?
         bochs_mod.addCMacro("__GITDATE__", "\"20260614\"");
