@@ -28,22 +28,21 @@ const SourceFile = struct {
 
 const BuildOptions = struct {
     const Display = struct {
-        with_sdl: bool,
         with_sdl2: bool,
         with_x11: bool,
     };
 
+    const SourceBuilds = struct {
+        sdl2: bool,
+    };
+
     display: Display,
+    source_builds: SourceBuilds,
     compiledb: bool,
 
     pub fn init(b: *std.Build) BuildOptions {
         return .{
             .display = .{
-                .with_sdl = b.option(
-                    bool,
-                    "with-sdl",
-                    "Link against and make SDL available",
-                ) orelse false,
                 .with_sdl2 = b.option(
                     bool,
                     "with-sdl2",
@@ -60,6 +59,13 @@ const BuildOptions = struct {
                 "compiledb",
                 "Create compile_commands.json",
             ) orelse false,
+            .source_builds = .{
+                .sdl2 = b.option(
+                    bool,
+                    "build-sdl2",
+                    "Build sdl2 from source",
+                ) orelse false,
+            },
         };
     }
 };
@@ -97,29 +103,14 @@ pub fn build(b: *std.Build) void {
         }
     }
 
-    if (options.display.with_sdl and options.display.with_sdl2) {
-        @panic("-Dwith_sdl2 and -Dwith-sdl are mutually exclusive");
-    }
-
     // ********************************************************************* //
     // *** Individual Modules (1:1 mapping to old Makefiles static libs) *** //
     // ********************************************************************* //
-
-    const depsdl: ?*std.Build.Dependency = switch (options.display.with_sdl) {
-        true => b.lazyDependency("SDL", .{
-            .target = target,
-            .optimize = optimize,
-        }),
-        false => null,
-    };
 
     const depsdl2: ?*std.Build.Dependency = switch (options.display.with_sdl2) {
         true => b.lazyDependency("SDL2", .{
             .target = target,
             .optimize = optimize,
-            .render_driver_ogl = false,
-            .render_driver_ogl_es = false,
-            .render_driver_ogl_es2 = false,
         }),
         false => null,
     };
@@ -169,21 +160,27 @@ pub fn build(b: *std.Build) void {
                 file.toTmpFileName(b) catch @panic("OOM"),
             ) catch @panic("OOM");
         }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
         iodev_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
             .language = .cpp,
         });
     }
+    if (target.result.os.tag == .macos) {
+        iodev_module.addCMacro("macintosh", "");
+        iodev_module.addCMacro("_THREAD_SAFE", "");
+    }
     iodev_module.addCMacro("_FILE_OFFSET_BITS", "64");
     iodev_module.addCMacro("_LARGE_FILES", "");
-    if (options.display.with_sdl) {
-        if (depsdl) |dep| {
-            iodev_module.addCMacro("_GNU_SOURCE", "1");
-            iodev_module.addCMacro("_REENTRANT", "");
-            iodev_module.linkLibrary(dep.artifact("SDL"));
-        }
-    } else if (options.display.with_sdl2) {
+    if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             iodev_module.addSystemIncludePath(dep.path("include/"));
             iodev_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -215,6 +212,14 @@ pub fn build(b: *std.Build) void {
                 file.toTmpFileName(b) catch @panic("OOM"),
             ) catch @panic("OOM");
         }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
 
         display_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
@@ -222,15 +227,13 @@ pub fn build(b: *std.Build) void {
             .language = .cpp,
         });
     }
+    if (target.result.os.tag == .macos) {
+        display_module.addCMacro("macintosh", "");
+        display_module.addCMacro("_THREAD_SAFE", "");
+    }
     display_module.addCMacro("_FILE_OFFSET_BITS", "64");
     display_module.addCMacro("_LARGE_FILES", "");
-    if (options.display.with_sdl) {
-        if (depsdl) |dep| {
-            display_module.addCMacro("_GNU_SOURCE", "1");
-            display_module.addCMacro("_REENTRANT", "");
-            display_module.linkLibrary(dep.artifact("SDL"));
-        }
-    } else if (options.display.with_sdl2) {
+    if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             display_module.addSystemIncludePath(dep.path("include/"));
             display_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -267,21 +270,27 @@ pub fn build(b: *std.Build) void {
                 file.toTmpFileName(b) catch @panic("OOM"),
             ) catch @panic("OOM");
         }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
         hdimage_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
             .language = .cpp,
         });
     }
+    if (target.result.os.tag == .macos) {
+        hdimage_module.addCMacro("macintosh", "");
+        hdimage_module.addCMacro("_THREAD_SAFE", "");
+    }
     hdimage_module.addCMacro("_FILE_OFFSET_BITS", "64");
     hdimage_module.addCMacro("_LARGE_FILES", "");
-    if (options.display.with_sdl) {
-        if (depsdl) |dep| {
-            hdimage_module.addCMacro("_GNU_SOURCE", "1");
-            hdimage_module.addCMacro("_REENTRANT", "");
-            hdimage_module.linkLibrary(dep.artifact("SDL"));
-        }
-    } else if (options.display.with_sdl2) {
+    if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             hdimage_module.addSystemIncludePath(dep.path("include/"));
             hdimage_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -395,21 +404,27 @@ pub fn build(b: *std.Build) void {
                 file.toTmpFileName(b) catch @panic("OOM"),
             ) catch @panic("OOM");
         }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
         cpu_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
             .language = .cpp,
         });
     }
+    if (target.result.os.tag == .macos) {
+        cpu_module.addCMacro("macintosh", "");
+        cpu_module.addCMacro("_THREAD_SAFE", "");
+    }
     cpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     cpu_module.addCMacro("_LARGE_FILES", "");
-    if (options.display.with_sdl) {
-        if (depsdl) |dep| {
-            cpu_module.addCMacro("_GNU_SOURCE", "1");
-            cpu_module.addCMacro("_REENTRANT", "");
-            cpu_module.linkLibrary(dep.artifact("SDL"));
-        }
-    } else if (options.display.with_sdl2) {
+    if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             cpu_module.addSystemIncludePath(dep.path("include/"));
             cpu_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -465,21 +480,27 @@ pub fn build(b: *std.Build) void {
                 file.toTmpFileName(b) catch @panic("OOM"),
             ) catch @panic("OOM");
         }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
         cpudb_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
             .language = .cpp,
         });
     }
+    if (target.result.os.tag == .macos) {
+        cpudb_module.addCMacro("macintosh", "");
+        cpudb_module.addCMacro("_THREAD_SAFE", "");
+    }
     cpudb_module.addCMacro("_FILE_OFFSET_BITS", "64");
     cpudb_module.addCMacro("_LARGE_FILES", "");
-    if (options.display.with_sdl) {
-        if (depsdl) |dep| {
-            cpudb_module.addCMacro("_GNU_SOURCE", "1");
-            cpudb_module.addCMacro("_REENTRANT", "");
-            cpudb_module.linkLibrary(dep.artifact("SDL"));
-        }
-    } else if (options.display.with_sdl2) {
+    if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             cpudb_module.addSystemIncludePath(dep.path("include/"));
             cpudb_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -509,21 +530,27 @@ pub fn build(b: *std.Build) void {
                 file.toTmpFileName(b) catch @panic("OOM"),
             ) catch @panic("OOM");
         }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
         memory_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
             .language = .cpp,
         });
     }
+    if (target.result.os.tag == .macos) {
+        memory_module.addCMacro("macintosh", "");
+        memory_module.addCMacro("_THREAD_SAFE", "");
+    }
     memory_module.addCMacro("_FILE_OFFSET_BITS", "64");
     memory_module.addCMacro("_LARGE_FILES", "");
-    if (options.display.with_sdl) {
-        if (depsdl) |dep| {
-            memory_module.addCMacro("_GNU_SOURCE", "1");
-            memory_module.addCMacro("_REENTRANT", "");
-            memory_module.linkLibrary(dep.artifact("SDL"));
-        }
-    } else if (options.display.with_sdl2) {
+    if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             memory_module.addSystemIncludePath(dep.path("include/"));
             memory_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -541,12 +568,19 @@ pub fn build(b: *std.Build) void {
     gui_module.addIncludePath(b.path("bochs/"));
     gui_module.addIncludePath(b.path("bochs/iodev/"));
     gui_module.addIncludePath(b.path("bochs/instrument/stubs/"));
-    const gui_module_files: []const SourceFile = comptime &.{
+    const display_file: []const u8 = blk: {
+        if (options.display.with_sdl2) {
+            break :blk "sdl2.cc";
+        } else {
+            break :blk "x.cc";
+        }
+    };
+    const gui_module_files = [_]SourceFile{
         .{ .directory = "bochs/gui/", .name = "keymap.cc" },
         .{ .directory = "bochs/gui/", .name = "gui.cc" },
         .{ .directory = "bochs/gui/", .name = "siminterface.cc" },
         .{ .directory = "bochs/gui/", .name = "paramtree.cc" },
-        .{ .directory = "bochs/gui/", .name = "x.cc" },
+        .{ .directory = "bochs/gui/", .name = display_file },
         .{ .directory = "bochs/gui/", .name = "textconfig.cc" },
     };
     inline for (gui_module_files) |file| {
@@ -558,21 +592,27 @@ pub fn build(b: *std.Build) void {
                 file.toTmpFileName(b) catch @panic("OOM"),
             ) catch @panic("OOM");
         }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
         gui_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
             .language = .cpp,
         });
     }
+    if (target.result.os.tag == .macos) {
+        gui_module.addCMacro("macintosh", "");
+        gui_module.addCMacro("_THREAD_SAFE", "");
+    }
     gui_module.addCMacro("_FILE_OFFSET_BITS", "64");
     gui_module.addCMacro("_LARGE_FILES", "");
-    if (options.display.with_sdl) {
-        if (depsdl) |dep| {
-            gui_module.addCMacro("_GNU_SOURCE", "1");
-            gui_module.addCMacro("_REENTRANT", "");
-            gui_module.linkLibrary(dep.artifact("SDL"));
-        }
-    } else if (options.display.with_sdl2) {
+    if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             gui_module.addSystemIncludePath(dep.path("include/"));
             gui_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -622,21 +662,27 @@ pub fn build(b: *std.Build) void {
                 file.toTmpFileName(b) catch @panic("OOM"),
             ) catch @panic("OOM");
         }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
         fpu_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
             .language = .cpp,
         });
     }
+    if (target.result.os.tag == .macos) {
+        fpu_module.addCMacro("macintosh", "");
+        fpu_module.addCMacro("_THREAD_SAFE", "");
+    }
     fpu_module.addCMacro("_FILE_OFFSET_BITS", "64");
     fpu_module.addCMacro("_LARGE_FILES", "");
-    if (options.display.with_sdl) {
-        if (depsdl) |dep| {
-            fpu_module.addCMacro("_GNU_SOURCE", "1");
-            fpu_module.addCMacro("_REENTRANT", "");
-            fpu_module.linkLibrary(dep.artifact("SDL"));
-        }
-    } else if (options.display.with_sdl2) {
+    if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             fpu_module.addSystemIncludePath(dep.path("include/"));
             fpu_module.addSystemIncludePath(dep.path("include-pregen/"));
@@ -672,6 +718,14 @@ pub fn build(b: *std.Build) void {
                 file.toTmpFileName(b) catch @panic("OOM"),
             ) catch @panic("OOM");
         }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
         bochs_mod.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
@@ -683,15 +737,13 @@ pub fn build(b: *std.Build) void {
         bochs_mod.addCMacro("__GITDATE__", "\"20260614\"");
         bochs_mod.addCMacro("__GITTIME__", "\"00:00\"");
     }
+    if (target.result.os.tag == .macos) {
+        bochs_mod.addCMacro("macintosh", "");
+        bochs_mod.addCMacro("_THREAD_SAFE", "");
+    }
     bochs_mod.addCMacro("_FILE_OFFSET_BITS", "64");
     bochs_mod.addCMacro("_LARGE_FILES", "");
-    if (options.display.with_sdl) {
-        if (depsdl) |dep| {
-            bochs_mod.addCMacro("_GNU_SOURCE", "1");
-            bochs_mod.addCMacro("_REENTRANT", "");
-            bochs_mod.linkLibrary(dep.artifact("SDL"));
-        }
-    } else if (options.display.with_sdl2) {
+    if (options.display.with_sdl2) {
         if (depsdl2) |dep| {
             bochs_mod.addSystemIncludePath(dep.path("include/"));
             bochs_mod.addSystemIncludePath(dep.path("include-pregen/"));
@@ -756,7 +808,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(libmemory);
 
     const libgui = b.addLibrary(.{
-        .name = "memory",
+        .name = "gui",
         .linkage = .static,
         .root_module = gui_module,
     });
@@ -768,6 +820,25 @@ pub fn build(b: *std.Build) void {
         .root_module = fpu_module,
     });
     b.installArtifact(libfpu);
+
+    const libs = [_]*std.Build.Step.Compile{
+        libiodev,
+        libdisplay,
+        libhdimage,
+        libcpu,
+        libcpudb,
+        libmemory,
+        libgui,
+        libfpu,
+    };
+
+    for (libs) |lib| {
+        var desc_buf: std.ArrayList(u8) = .empty;
+        desc_buf.appendSlice(b.allocator, "Build ") catch @panic("OOM");
+        desc_buf.appendSlice(b.allocator, lib.name) catch @panic("OOM");
+        const build_lib_step = b.step(lib.name, desc_buf.items);
+        build_lib_step.dependOn(&lib.step);
+    }
 
     // ********************************************************************* //
     // ******************* Creation of final executable ******************** //
@@ -816,7 +887,13 @@ pub fn build(b: *std.Build) void {
     bochs_mod.linkLibrary(libmemory);
     bochs_mod.linkLibrary(libgui);
     bochs_mod.linkLibrary(libfpu);
-    if (options.display.with_x11) {
+    if (options.display.with_sdl2) {
+        if (depsdl2) |dep| {
+            bochs_mod.addSystemIncludePath(dep.path("include/"));
+            bochs_mod.addSystemIncludePath(dep.path("include-pregen/"));
+            bochs_mod.linkLibrary(dep.artifact("SDL2"));
+        }
+    } else if (options.display.with_x11) {
         std.debug.print("WARNING: Building against X11 disables cross-buildability\n", .{});
         bochs_mod.linkSystemLibrary("X11", .{});
         bochs_mod.linkSystemLibrary("Xpm", .{});
