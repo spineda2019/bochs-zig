@@ -125,6 +125,10 @@ pub fn build(b: *std.Build) void {
         true => b.lazyDependency("SDL2", .{
             .target = target,
             .optimize = optimize,
+            .render_driver_ogl_es = switch (target.result.os.tag) {
+                .linux => false,
+                else => true,
+            },
         }),
         false => null,
     };
