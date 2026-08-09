@@ -122,14 +122,17 @@ pub fn build(b: *std.Build) void {
     // ********************************************************************* //
 
     const depsdl2: ?*std.Build.Dependency = switch (options.display.with_sdl2) {
-        true => b.lazyDependency("SDL2", .{
-            .target = target,
-            .optimize = optimize,
-            .render_driver_ogl_es = switch (target.result.os.tag) {
-                .linux => false,
-                else => true,
-            },
-        }),
+        true => switch (target.result.os.tag) {
+            .macos => b.lazyDependency("SDL2", .{
+                .target = target,
+                .optimize = optimize,
+            }),
+            else => b.lazyDependency("SDL2", .{
+                .target = target,
+                .optimize = optimize,
+                .render_driver_ogl_es = false,
+            }),
+        },
         false => null,
     };
 
