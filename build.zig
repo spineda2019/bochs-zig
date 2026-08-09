@@ -78,6 +78,42 @@ const ConfigDisplayMacro = struct {
     }
 };
 
+const cpp_files = struct {
+    const iodev = struct {
+        const base = [_]SourceFile{
+            .{ .directory = "bochs/iodev/", .name = "devices.cc" },
+            .{ .directory = "bochs/iodev/", .name = "virt_timer.cc" },
+            .{ .directory = "bochs/iodev/", .name = "slowdown_timer.cc" },
+            .{ .directory = "bochs/iodev/", .name = "pic.cc" },
+            .{ .directory = "bochs/iodev/", .name = "pit.cc" },
+            .{ .directory = "bochs/iodev/", .name = "serial.cc" },
+            .{ .directory = "bochs/iodev/", .name = "parallel.cc" },
+            .{ .directory = "bochs/iodev/", .name = "floppy.cc" },
+            .{ .directory = "bochs/iodev/", .name = "keyboard.cc" },
+            .{ .directory = "bochs/iodev/", .name = "biosdev.cc" },
+            .{ .directory = "bochs/iodev/", .name = "cmos.cc" },
+            .{ .directory = "bochs/iodev/", .name = "harddrv.cc" },
+            .{ .directory = "bochs/iodev/", .name = "dma.cc" },
+            .{ .directory = "bochs/iodev/", .name = "unmapped.cc" },
+            .{ .directory = "bochs/iodev/", .name = "extfpuirq.cc" },
+            .{ .directory = "bochs/iodev/", .name = "speaker.cc" },
+            .{ .directory = "bochs/iodev/", .name = "ioapic.cc" },
+            .{ .directory = "bochs/iodev/", .name = "pci.cc" },
+            .{ .directory = "bochs/iodev/", .name = "pci2isa.cc" },
+            .{ .directory = "bochs/iodev/", .name = "pci_ide.cc" },
+            .{ .directory = "bochs/iodev/", .name = "acpi.cc" },
+            .{ .directory = "bochs/iodev/", .name = "hpet.cc" },
+            .{ .directory = "bochs/iodev/", .name = "pit82c54.cc" },
+            .{ .directory = "bochs/iodev/", .name = "scancodes.cc" },
+            .{ .directory = "bochs/iodev/", .name = "serial_raw.cc" },
+        };
+
+        const debug = [_]SourceFile{
+            .{ .directory = "bochs/iodev/", .name = "iodebug.cc" },
+        };
+    };
+};
+
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
@@ -157,34 +193,14 @@ pub fn build(b: *std.Build) void {
     iodev_module.addIncludePath(b.path("bochs/generated/"));
     iodev_module.addIncludePath(b.path("bochs/"));
     iodev_module.addIncludePath(b.path("bochs/instrument/stubs/"));
-    const iodev_module_files: []const SourceFile = comptime &.{
-        .{ .directory = "bochs/iodev/", .name = "devices.cc" },
-        .{ .directory = "bochs/iodev/", .name = "virt_timer.cc" },
-        .{ .directory = "bochs/iodev/", .name = "slowdown_timer.cc" },
-        .{ .directory = "bochs/iodev/", .name = "pic.cc" },
-        .{ .directory = "bochs/iodev/", .name = "pit.cc" },
-        .{ .directory = "bochs/iodev/", .name = "serial.cc" },
-        .{ .directory = "bochs/iodev/", .name = "parallel.cc" },
-        .{ .directory = "bochs/iodev/", .name = "floppy.cc" },
-        .{ .directory = "bochs/iodev/", .name = "keyboard.cc" },
-        .{ .directory = "bochs/iodev/", .name = "biosdev.cc" },
-        .{ .directory = "bochs/iodev/", .name = "cmos.cc" },
-        .{ .directory = "bochs/iodev/", .name = "harddrv.cc" },
-        .{ .directory = "bochs/iodev/", .name = "dma.cc" },
-        .{ .directory = "bochs/iodev/", .name = "unmapped.cc" },
-        .{ .directory = "bochs/iodev/", .name = "extfpuirq.cc" },
-        .{ .directory = "bochs/iodev/", .name = "speaker.cc" },
-        .{ .directory = "bochs/iodev/", .name = "ioapic.cc" },
-        .{ .directory = "bochs/iodev/", .name = "pci.cc" },
-        .{ .directory = "bochs/iodev/", .name = "pci2isa.cc" },
-        .{ .directory = "bochs/iodev/", .name = "pci_ide.cc" },
-        .{ .directory = "bochs/iodev/", .name = "acpi.cc" },
-        .{ .directory = "bochs/iodev/", .name = "hpet.cc" },
-        .{ .directory = "bochs/iodev/", .name = "pit82c54.cc" },
-        .{ .directory = "bochs/iodev/", .name = "scancodes.cc" },
-        .{ .directory = "bochs/iodev/", .name = "serial_raw.cc" },
+    const iodev_module_files: []const SourceFile = blk: {
+        if (options.enable_debugger) {
+            break :blk &(cpp_files.iodev.base ++ cpp_files.iodev.debug);
+        } else {
+            break :blk &cpp_files.iodev.base;
+        }
     };
-    inline for (iodev_module_files) |file| {
+    for (iodev_module_files) |file| {
         var flagbuf: std.ArrayList([]const u8) = .empty;
         if (options.compiledb) {
             flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
@@ -733,6 +749,86 @@ pub fn build(b: *std.Build) void {
         }
     }
 
+    const debug_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    debug_module.addIncludePath(b.path("bochs/"));
+    debug_module.addIncludePath(b.path("bochs/instrument/stubs/"));
+    debug_module.addIncludePath(b.path("bochs/generated/"));
+    const debug_module_cpp_files = [_]SourceFile{
+        .{ .directory = "bochs/bx_debug/", .name = "dbg_main.cc" },
+        .{ .directory = "bochs/bx_debug/", .name = "dbg_breakpoints.cc" },
+        .{ .directory = "bochs/bx_debug/", .name = "symbols.cc" },
+        .{ .directory = "bochs/bx_debug/", .name = "linux.cc" },
+        .{ .directory = "bochs/bx_debug/", .name = "parser.cc" },
+    };
+    const debug_module_c_files = [_]SourceFile{
+        .{ .directory = "bochs/bx_debug/", .name = "lexer.c" },
+    };
+    for (debug_module_cpp_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
+        debug_module.addCSourceFile(.{
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
+            .language = .cpp,
+        });
+    }
+    for (debug_module_c_files) |file| {
+        var flagbuf: std.ArrayList([]const u8) = .empty;
+        if (options.compiledb) {
+            flagbuf.append(b.allocator, "-MJ") catch @panic("OOM");
+            flagbuf.append(
+                b.allocator,
+                file.toTmpFileName(b) catch @panic("OOM"),
+            ) catch @panic("OOM");
+        }
+        if (target.result.os.tag == .macos) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-fpascal-strings",
+                "-fno-common",
+                "-Wno-four-char-constants",
+                "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
+        debug_module.addCSourceFile(.{
+            .file = file.toLazyPath(b) catch @panic("OOM"),
+            .flags = flagbuf.items,
+            .language = .c,
+        });
+    }
+    ConfigDisplayMacro.defineCMacro(&config_display_macros, debug_module);
+    if (target.result.os.tag == .macos) {
+        debug_module.addCMacro("macintosh", "");
+        debug_module.addCMacro("_THREAD_SAFE", "");
+    }
+    debug_module.addCMacro("_FILE_OFFSET_BITS", "64");
+    debug_module.addCMacro("_LARGE_FILES", "");
+    if (options.display.with_sdl2) {
+        if (depsdl2) |dep| {
+            debug_module.addSystemIncludePath(dep.path("include/"));
+            debug_module.addSystemIncludePath(dep.path("include-pregen/"));
+            debug_module.linkLibrary(dep.artifact("SDL2"));
+        }
+    }
+
     const bochs_mod = b.addModule("bochs", .{
         .target = target,
         .optimize = optimize,
@@ -865,6 +961,12 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(libfpu);
 
+    const libdebug = b.addLibrary(.{
+        .name = "debug",
+        .linkage = .static,
+        .root_module = debug_module,
+    });
+
     const libs = [_]*std.Build.Step.Compile{
         libiodev,
         libdisplay,
@@ -874,6 +976,7 @@ pub fn build(b: *std.Build) void {
         libmemory,
         libgui,
         libfpu,
+        libdebug,
     };
 
     for (libs) |lib| {
@@ -890,7 +993,7 @@ pub fn build(b: *std.Build) void {
 
     const bochsrc_install = b.addInstallFile(b.path("bochs/.bochsrc"), "bochs-share/.bochsrc");
 
-    const share_files: []const SourceFile = comptime &.{
+    const share_files = comptime [_]SourceFile{
         .{ .name = "bios.bin-1.13.0", .directory = "bochs/bios/" },
         .{ .name = "BIOS-bochs-latest", .directory = "bochs/bios/" },
         .{ .name = "BIOS-bochs-legacy", .directory = "bochs/bios/" },
@@ -942,6 +1045,9 @@ pub fn build(b: *std.Build) void {
         bochs_mod.linkSystemLibrary("X11", .{});
         bochs_mod.linkSystemLibrary("Xpm", .{});
         bochs_mod.linkSystemLibrary("Xrandr", .{});
+    }
+    if (options.enable_debugger) {
+        bochs_mod.linkLibrary(libdebug);
     }
 
     const bochs = b.addExecutable(.{
