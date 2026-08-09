@@ -217,6 +217,12 @@ pub fn build(b: *std.Build) void {
                 "-Wno-unknown-pragmas",
             }) catch @panic("OOM");
         }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
+            }) catch @panic("OOM");
+        }
         iodev_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
@@ -268,6 +274,12 @@ pub fn build(b: *std.Build) void {
                 "-fno-common",
                 "-Wno-four-char-constants",
                 "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
             }) catch @panic("OOM");
         }
 
@@ -327,6 +339,12 @@ pub fn build(b: *std.Build) void {
                 "-fno-common",
                 "-Wno-four-char-constants",
                 "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
             }) catch @panic("OOM");
         }
         hdimage_module.addCSourceFile(.{
@@ -464,6 +482,12 @@ pub fn build(b: *std.Build) void {
                 "-Wno-unknown-pragmas",
             }) catch @panic("OOM");
         }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
+            }) catch @panic("OOM");
+        }
         cpu_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
@@ -541,6 +565,12 @@ pub fn build(b: *std.Build) void {
                 "-Wno-unknown-pragmas",
             }) catch @panic("OOM");
         }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
+            }) catch @panic("OOM");
+        }
         cpudb_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
@@ -590,6 +620,12 @@ pub fn build(b: *std.Build) void {
                 "-fno-common",
                 "-Wno-four-char-constants",
                 "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
             }) catch @panic("OOM");
         }
         memory_module.addCSourceFile(.{
@@ -655,6 +691,12 @@ pub fn build(b: *std.Build) void {
                 "-fno-common",
                 "-Wno-four-char-constants",
                 "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
             }) catch @panic("OOM");
         }
         gui_module.addCSourceFile(.{
@@ -728,6 +770,12 @@ pub fn build(b: *std.Build) void {
                 "-Wno-unknown-pragmas",
             }) catch @panic("OOM");
         }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
+            }) catch @panic("OOM");
+        }
         fpu_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
@@ -785,6 +833,12 @@ pub fn build(b: *std.Build) void {
                 "-Wno-unknown-pragmas",
             }) catch @panic("OOM");
         }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
+            }) catch @panic("OOM");
+        }
         debug_module.addCSourceFile(.{
             .file = file.toLazyPath(b) catch @panic("OOM"),
             .flags = flagbuf.items,
@@ -806,6 +860,12 @@ pub fn build(b: *std.Build) void {
                 "-fno-common",
                 "-Wno-four-char-constants",
                 "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
             }) catch @panic("OOM");
         }
         debug_module.addCSourceFile(.{
@@ -863,6 +923,12 @@ pub fn build(b: *std.Build) void {
                 "-fno-common",
                 "-Wno-four-char-constants",
                 "-Wno-unknown-pragmas",
+            }) catch @panic("OOM");
+        }
+        if (optimize == .Debug) {
+            flagbuf.appendSlice(b.allocator, &.{
+                "-g",
+                "-fno-omit-frame-pointer",
             }) catch @panic("OOM");
         }
         bochs_mod.addCSourceFile(.{
