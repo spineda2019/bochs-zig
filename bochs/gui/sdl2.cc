@@ -430,12 +430,15 @@ void bx_sdl2_gui_c::specific_init(int argc, char **argv, unsigned headerbar_y)
     for(j=0;j<8;j++)
       menufont[i][j] = sdl_font8x8[i][j];
 
+  // Create the window at its final size: a resize request issued immediately
+  // after the map request is frequently ignored by the window manager, which
+  // leaves us with a surface smaller than res_y+headerbar_height+statusbar_height.
   window = SDL_CreateWindow(
     BOCHS_WINDOW_NAME,
     SDL_WINDOWPOS_UNDEFINED,
     SDL_WINDOWPOS_UNDEFINED,
     640,
-    480,
+    480 + headerbar_height + statusbar_height,
     SDL_WINDOW_SHOWN
     );
   if (window == NULL) {
@@ -986,8 +989,19 @@ void bx_sdl2_gui_c::dimension_update(unsigned x, unsigned y,
   }
 #endif
   if (sdl_fullscreen_toggle == 0) {
-    SDL_SetWindowSize(window, x, y + headerbar_height + statusbar_height);
+    const int req_h = (int)y + headerbar_height + statusbar_height;
+    SDL_SetWindowSize(window, x, req_h);
     sdl_screen = SDL_GetWindowSurface(window);
+    // A window manager may refuse the resize, in which case SDL hands back a
+    // surface matching the old geometry. Leaving res_x/res_y updated past this
+    // point would make the headerbar and statusbar draw outside sdl_screen->pixels.
+    if ((sdl_screen == NULL) || (sdl_screen->w < (int)x) || (sdl_screen->h < req_h)) {
+      BX_PANIC(("SDL2 window is %dx%d, but %dx%d was requested",
+                (sdl_screen != NULL) ? sdl_screen->w : 0,
+                (sdl_screen != NULL) ? sdl_screen->h : 0,
+                (int)x, req_h));
+      return;
+    }
     headerbar_fg = SDL_MapRGB(
         sdl_screen->format,
         BX_HEADERBAR_FG_RED,
