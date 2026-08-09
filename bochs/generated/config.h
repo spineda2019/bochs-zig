@@ -597,16 +597,12 @@ typedef Bit64u bx_ptr_equiv_t;
 #endif
 
 #define BX_GDBSTUB 0
-#define BX_DEBUGGER 0
 #define BX_DEBUGGER_GUI 0
 
 #define BX_INSTRUMENTATION 0
 
 // enable BX_DEBUG/BX_ERROR/BX_INFO messages
 #define BX_NO_LOGGING 0
-
-// enable BX_ASSERT checks
-#define BX_ASSERT_ENABLE 0
 
 // enable statistics collection
 #define BX_ENABLE_STATISTICS 1
@@ -875,9 +871,6 @@ typedef Bit64u bx_ptr_equiv_t;
 #if (BX_SUPPORT_ES1370 && !BX_SUPPORT_PCI)
 #error To enable the ES1370 soundcard, you must also enable PCI
 #endif
-
-// I/O Interface to debugger
-#define BX_SUPPORT_IODEBUG 0
 
 #ifdef WIN32
 #define BX_FLOPPY0_NAME "Floppy Disk A:"

@@ -32,12 +32,8 @@ const BuildOptions = struct {
         with_x11: bool,
     };
 
-    const SourceBuilds = struct {
-        sdl2: bool,
-    };
-
     display: Display,
-    source_builds: SourceBuilds,
+    enable_debugger: bool,
     compiledb: bool,
 
     pub fn init(b: *std.Build) BuildOptions {
@@ -59,13 +55,11 @@ const BuildOptions = struct {
                 "compiledb",
                 "Create compile_commands.json",
             ) orelse false,
-            .source_builds = .{
-                .sdl2 = b.option(
-                    bool,
-                    "build-sdl2",
-                    "Build sdl2 from source",
-                ) orelse false,
-            },
+            .enable_debugger = b.option(
+                bool,
+                "enable-debugger",
+                "Build bochs with the debugger enables",
+            ) orelse false,
         };
     }
 };
@@ -149,6 +143,9 @@ pub fn build(b: *std.Build) void {
         .{ .macro_name = "BX_WITH_SDL", .enabled = false },
         .{ .macro_name = "BX_WITH_SDL2", .enabled = options.display.with_sdl2 },
         .{ .macro_name = "BX_WITH_WX", .enabled = false },
+        .{ .macro_name = "BX_DEBUGGER", .enabled = options.enable_debugger },
+        .{ .macro_name = "BX_ASSERT_ENABLE", .enabled = options.enable_debugger },
+        .{ .macro_name = "BX_SUPPORT_IODEBUG", .enabled = options.enable_debugger },
     };
 
     const iodev_module = b.createModule(.{
